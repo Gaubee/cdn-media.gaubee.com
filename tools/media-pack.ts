@@ -837,6 +837,27 @@ function curlBytes(url: string): Uint8Array {
   }
 }
 
+// raw 主分支清单的 JSON 拉取。注意：curlBytes 返回的是纯 Uint8Array（readFileSync 的
+// Buffer 经 new Uint8Array 拷贝后丢失 toString 的 utf8 覆盖），必须 TextDecoder 解码，
+// 否则 JSON.parse 拿到的是 "123,10,32..." 十进制串必然失败（2026-10-06 演练实录）。
+function curlJsonWithRetry<T>(url: string, retries = 4): T {
+  let last = "";
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      const wait = 3000 * 2 ** (attempt - 1);
+      log(`[drill] ${url} 第 ${attempt}/${retries} 次重试（退避 ${wait}ms）：${last}`);
+      Bun.sleepSync(wait);
+    }
+    const bytes = curlBytes(url);
+    try {
+      return JSON.parse(new TextDecoder().decode(bytes)) as T;
+    } catch {
+      last = `响应非 JSON（前 80 字符：${new TextDecoder().decode(bytes).slice(0, 80).replace(/\n/g, " ")}）`;
+    }
+  }
+  die(`JSON 拉取连续 ${retries + 1} 次失败：${url}（${last}）`);
+}
+
 async function runDrill(dirArg: string): Promise<void> {
   const t0 = Date.now();
   const dir = path.resolve(dirArg);
@@ -851,7 +872,7 @@ async function runDrill(dirArg: string): Promise<void> {
   // 1/5 公网拉 current.json（raw.githubusercontent，无鉴权）
   const currentUrl = `${RAW_MANIFEST_BASE}/current.json`;
   log(`[drill] 1/5 拉取 ${currentUrl}`);
-  const cur = JSON.parse(curlBytes(currentUrl).toString()) as CurrentFile;
+  const cur = curlJsonWithRetry<CurrentFile>(currentUrl);
   if (typeof cur.gen !== "number" || typeof cur.manifest_sha256 !== "string") die("远程 current.json 结构非法");
 
   // 2/5 公网拉 manifest-<gen>.json 并校验 sha256
@@ -862,7 +883,7 @@ async function runDrill(dirArg: string): Promise<void> {
   if (mSha !== cur.manifest_sha256) {
     die(`manifest sha256 与远程 current.json 不一致: current=${cur.manifest_sha256} actual=${mSha}`);
   }
-  const manifest = JSON.parse(mBytes.toString()) as Manifest;
+  const manifest = JSON.parse(new TextDecoder().decode(mBytes)) as Manifest;
   if (manifest.format_version !== 1) die(`format_version=${manifest.format_version}，预期 1`);
   log(`[drill] manifest 校验通过: gen=${cur.gen}, 对象 ${manifest.objects.length}, 卷 ${manifest.volumes.length}`);
 
