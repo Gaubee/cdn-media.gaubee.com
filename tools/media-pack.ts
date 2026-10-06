@@ -10,6 +10,22 @@
 //       本地恢复演练：拉 current.json → 拉 manifest-<gen>.json（校验 sha256）→ 校验每卷
 //       sha256 → 按对象 offset/size 从卷中解包恢复到 cdn-media/staging/.verify-restore →
 //       与源目录全量逐一 sha256 对账。
+//   bun cdn-media/tools/media-pack.ts --publish [--only YYYY-MM]
+//       发布阶段（Phase 0.2）：按月分组把 staging 卷上传 GitHub Releases（release tag =
+//       media-<YYYY-MM>，标题同名；卷为该 release 的 asset，asset 名 = 文件名）。幂等：
+//       release 已存在则跳过创建；asset 已存在且本地整卷 sha256（与 manifest 对账通过）
+//       与远端 size/digest 一致则跳过上传；gh 调用失败重试（3 次、指数退避）。全部上传后
+//       终验并回填 manifest/current.json 的 volumes[].asset_id（API asset id）与 url
+//       （browser_download_url），manifest_sha256 保持指向 manifest-<gen>.json 不变；
+//       回填只写工作区文件，git 提交由主流程完成。--only 仅处理指定月份（冒烟用）。
+//   bun cdn-media/tools/media-pack.ts --drill <dir>
+//       外部恢复演练（Phase 0.2 验收门）：空目录 <dir>，只通过公网 URL 拉取——
+//       raw.githubusercontent 的 current.json → manifest-<gen>.json（校验 sha256）→
+//       逐卷按 release asset 下载 URL 拉取（校验整卷 sha256）→ 按对象 offset/size 解包
+//       恢复全量文件并逐一 sha256 对账，输出「恢复 N / 一致 N / 差异 0」。
+//       若远程 current.json 的 volumes[].url 仍为 null（回填尚未提交推送），回退读取本地
+//       manifest/current.json 的 url 字段（要求 gen 与 manifest_sha256 与远程指针一致），
+//       并在日志中显式标注该回退。
 //
 // 契约引用:
 //   openspec/changes/cdn-media-bootstrap/plan.md — Stage A 契约 A1（tar 卷格式与 manifest
@@ -70,6 +86,8 @@ type ObjRec = {
 };
 type VolRec = { name: string; size: number; sha256: string; asset_name: string };
 type Manifest = { format_version: number; gen: number; objects: ObjRec[]; volumes: VolRec[] };
+type CurrentVol = { asset_id: number | null; url: string | null; sha256: string; name: string };
+type CurrentFile = { gen: number; manifest_sha256: string; manifest_path: string; volumes: CurrentVol[]; updated_at: string };
 
 function log(msg: string): void { console.log(msg); }
 function die(msg: string): never {
@@ -583,6 +601,352 @@ async function runVerify(): Promise<void> {
   }
 }
 
+// ---------- Phase 0.2：GitHub Releases 发布（--publish）与外部恢复演练（--drill） ----------
+
+const GH_REPO = "Gaubee/cdn-media.gaubee.com";
+const RAW_MANIFEST_BASE = `https://raw.githubusercontent.com/${GH_REPO}/main/manifest`;
+const GH_RETRY = 3;            // gh 报错重试次数（指数退避）
+const CURL_RETRY = 3;          // curl 报错重试次数（指数退避）
+const BACKOFF_BASE_MS = 2000;
+const GH_API_TIMEOUT_MS = 60_000;
+const GH_UPLOAD_TIMEOUT_MS = 30 * 60_000;
+
+type GhAsset = { id: number; name: string; size: number; digest: string | null; browser_download_url: string };
+type GhRelease = { tag_name: string; assets: GhAsset[] };
+
+function monthOfVolume(name: string): string {
+  const m = /^vol-(\d{4}-\d{2})-\d{3}\.tar$/.exec(name);
+  if (!m) die(`卷名无法解析月份: ${name}`);
+  return m[1];
+}
+
+function runWithRetry(label: string, cmd: string[], timeoutMs: number, retries: number): { stdout: string; stderr: string } {
+  let lastErr = "";
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      const wait = BACKOFF_BASE_MS * 2 ** (attempt - 1);
+      log(`[retry] ${label} 第 ${attempt}/${retries} 次重试（退避 ${wait}ms）`);
+      Bun.sleepSync(wait);
+    }
+    const r = Bun.spawnSync(cmd, { stdout: "pipe", stderr: "pipe", timeout: timeoutMs });
+    if (r.exitCode === 0) return { stdout: r.stdout.toString(), stderr: r.stderr.toString() };
+    lastErr = `exit=${r.exitCode} signal=${r.signalCode ?? "-"} stderr=${r.stderr.toString().trim().slice(-400)}`;
+    log(`[retry] ${label} 失败: ${lastErr}`);
+  }
+  die(`${label} 连续 ${retries + 1} 次尝试均失败（${lastErr}）`);
+}
+
+function runGh(args: string[], timeoutMs: number): { stdout: string; stderr: string } {
+  return runWithRetry(`gh ${args[0]} ${args[1] ?? ""}`.trim(), ["gh", ...args], timeoutMs, GH_RETRY);
+}
+
+// 拉取远端全部 release 及其 asset（含 API digest，用于幂等跳过的强校验）
+function listGhReleases(): Map<string, GhRelease> {
+  const out = new Map<string, GhRelease>();
+  const jq = "[.[] | {tag_name: .tag_name, assets: [.assets[] | {id: .id, name: .name, size: .size, digest: .digest, browser_download_url: .browser_download_url}]}]";
+  let page = 1;
+  for (;;) {
+    const { stdout } = runGh(["api", `repos/${GH_REPO}/releases?per_page=100&page=${page}`, "--jq", jq], GH_API_TIMEOUT_MS);
+    const trimmed = stdout.trim();
+    const rels = JSON.parse(trimmed === "" ? "[]" : trimmed) as GhRelease[];
+    for (const r of rels) out.set(r.tag_name, r);
+    if (rels.length < 100) break;
+    page += 1;
+  }
+  return out;
+}
+
+function loadCurrentStrict(): { cur: CurrentFile; manifest: Manifest } {
+  const curPath = path.join(MANIFEST_DIR, "current.json");
+  if (!existsSync(curPath)) die("current.json 不存在，请先运行 --initial");
+  const cur = JSON.parse(readFileSync(curPath, "utf8")) as CurrentFile;
+  if (typeof cur.gen !== "number" || typeof cur.manifest_sha256 !== "string" || !Array.isArray(cur.volumes)) {
+    die("current.json 结构非法");
+  }
+  const mp = path.join(MANIFEST_DIR, `manifest-${cur.gen}.json`);
+  if (!existsSync(mp)) die(`manifest-${cur.gen}.json 不存在`);
+  const mbytes = readFileSync(mp);
+  const msha = new Bun.CryptoHasher("sha256").update(mbytes).digest("hex");
+  if (msha !== cur.manifest_sha256) {
+    die(`manifest-${cur.gen}.json sha256 与 current.json 不一致: current=${cur.manifest_sha256} actual=${msha}`);
+  }
+  const manifest = JSON.parse(mbytes.toString()) as Manifest;
+  if (manifest.format_version !== 1) die(`format_version=${manifest.format_version}，预期 1`);
+  return { cur, manifest };
+}
+
+async function runPublish(only?: string): Promise<void> {
+  const t0 = Date.now();
+  if (only && !/^\d{4}-\d{2}$/.test(only)) die(`--only 参数非法: ${only}（应为 YYYY-MM）`);
+  const { cur, manifest } = loadCurrentStrict();
+
+  // current.json 卷集合与 manifest 对齐校验（名称 + sha256）
+  const curVolByName = new Map(cur.volumes.map((v) => [v.name, v]));
+  for (const v of manifest.volumes) {
+    const cv = curVolByName.get(v.name);
+    if (!cv) die(`manifest 卷不在 current.json: ${v.name}`);
+    if (cv.sha256 !== v.sha256) die(`current 与 manifest 卷 sha256 不一致: ${v.name}`);
+  }
+
+  const selected = only ? manifest.volumes.filter((v) => monthOfVolume(v.name) === only) : manifest.volumes;
+  if (selected.length === 0) die(`--only ${only} 没有匹配的卷`);
+
+  // 打包产物完整性闸门：staging 卷尺寸 + 整卷 sha256 逐一复算
+  log(`[publish] 复算 staging ${selected.length} 卷整卷 sha256（与 manifest 对账）…`);
+  for (const v of selected) {
+    const p = path.join(STAGING, v.name);
+    if (!existsSync(p)) die(`staging 卷缺失: ${v.name}`);
+    const st = statSync(p);
+    if (st.size !== v.size) die(`卷尺寸不符: ${v.name} manifest=${v.size} actual=${st.size}`);
+    const sha = await hashFile(p);
+    if (sha !== v.sha256) die(`卷 sha256 不符: ${v.name} manifest=${v.sha256} actual=${sha}`);
+  }
+
+  // 按月分组
+  const byMonth = new Map<string, VolRec[]>();
+  for (const v of selected) {
+    const month = monthOfVolume(v.name);
+    const list = byMonth.get(month);
+    if (list) list.push(v); else byMonth.set(month, [v]);
+  }
+
+  // 预检（上传前）：每 release asset 数 ≤1000
+  for (const [month, list] of byMonth) {
+    if (list.length > ASSET_MAX_PER_RELEASE) {
+      die(`预检失败: media-${month} 需 ${list.length} asset，超过每 release ${ASSET_MAX_PER_RELEASE} 上限`);
+    }
+  }
+  log(`[publish] 预检通过: ${byMonth.size} 个按月 release，每月 asset 数 ≤${ASSET_MAX_PER_RELEASE}`);
+
+  log(`[publish] 拉取远端 release 列表…`);
+  const releases = listGhReleases();
+
+  let created = 0;
+  let existed = 0;
+  let uploaded = 0;
+  let reused = 0;
+  let uploadedBytes = 0;
+
+  for (const month of [...byMonth.keys()].sort()) {
+    const list = byMonth.get(month)!;
+    const tag = `media-${month}`;
+    let rel = releases.get(tag);
+    if (!rel) {
+      const notes = `cdn-media 月度媒体卷归档 ${tag}：vol-${month}-NNN.tar 共 ${list.length} 卷，由 media-pack --publish 上传；对象索引以仓库 manifest 为准（卷内容不可变，asset 即权威副本）。`;
+      runGh(["release", "create", tag, "--repo", GH_REPO, "--title", tag, "--notes", notes], GH_API_TIMEOUT_MS);
+      rel = { tag_name: tag, assets: [] };
+      releases.set(tag, rel);
+      created += 1;
+      log(`[publish] ${tag}: release 已创建（${list.length} asset 待传）`);
+    } else {
+      existed += 1;
+      log(`[publish] ${tag}: release 已存在（远端 asset ${rel.assets.length}，跳过创建）`);
+    }
+
+    // 幂等跳过：asset 已存在且 size 一致 + digest 一致（digest 缺失时退化为 size 校验）
+    const assetByName = new Map(rel.assets.map((a) => [a.name, a]));
+    const need: VolRec[] = [];
+    for (const v of list) {
+      const a = assetByName.get(v.name);
+      if (!a) {
+        need.push(v);
+        continue;
+      }
+      const sizeOk = a.size === v.size;
+      const digestOk = a.digest === null ? null : a.digest === `sha256:${v.sha256}`;
+      if (sizeOk && digestOk !== false) {
+        reused += 1;
+      } else {
+        need.push(v);
+        log(`[publish] ${tag}/${v.name}: 远端不一致（size_ok=${sizeOk} digest_ok=${digestOk}），--clobber 重传`);
+      }
+    }
+    if (need.length > 0) {
+      uploadAssets(tag, need);
+      uploaded += need.length;
+      uploadedBytes += need.reduce((s, v) => s + v.size, 0);
+    }
+    log(`[publish] ${tag}: 本月上传 ${need.length} / 复用 ${list.length - need.length}，累计 asset ${list.length}（${list.reduce((s, v) => s + v.size, 0)} 字节）`);
+    Bun.sleepSync(500); // 按月限速，降低 secondary rate limit 风险
+  }
+
+  // 终验：重新拉取远端列表，逐卷核对 asset 存在性 + size + digest，并再跑一次 asset 数预检
+  log(`[publish] 终验：重新拉取远端 release 列表核对全部 asset…`);
+  const finals = listGhReleases();
+  const perTagCount = new Map<string, number>();
+  const assetsByName = new Map<string, GhAsset>();
+  for (const rel of finals.values()) {
+    perTagCount.set(rel.tag_name, rel.assets.length);
+    for (const a of rel.assets) assetsByName.set(a.name, a);
+  }
+  for (const [month, _list] of byMonth) {
+    const n = perTagCount.get(`media-${month}`) ?? 0;
+    if (n > ASSET_MAX_PER_RELEASE) die(`终验预检失败: media-${month} asset 数 ${n} 超过 ${ASSET_MAX_PER_RELEASE} 上限`);
+  }
+  for (const v of selected) {
+    const a = assetsByName.get(v.name);
+    if (!a) die(`终验失败: 卷无对应 asset: ${v.name}`);
+    if (a.size !== v.size) die(`终验 size 不符: ${v.name} local=${v.size} remote=${a.size}`);
+    if (a.digest !== null && a.digest !== `sha256:${v.sha256}`) die(`终验 digest 不符: ${v.name} local=sha256:${v.sha256} remote=${a.digest}`);
+  }
+
+  // 回填 current.json（只写工作区文件，git 提交由主流程完成）
+  const selectedNames = new Set(selected.map((v) => v.name));
+  const curPath = path.join(MANIFEST_DIR, "current.json");
+  const curObj = JSON.parse(readFileSync(curPath, "utf8")) as CurrentFile;
+  let filled = 0;
+  for (const cv of curObj.volumes) {
+    if (!selectedNames.has(cv.name)) continue;
+    const a = assetsByName.get(cv.name)!;
+    if (cv.asset_id !== a.id || cv.url !== a.browser_download_url) filled += 1;
+    cv.asset_id = a.id;
+    cv.url = a.browser_download_url;
+  }
+  curObj.updated_at = new Date().toISOString();
+  writeFileSync(curPath, JSON.stringify(curObj, null, 2) + "\n");
+
+  const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+  log(`[publish] 完成: release ${byMonth.size} 个（新建 ${created} / 已存在 ${existed}），asset 上传 ${uploaded} 个（${uploadedBytes} 字节），复用跳过 ${reused} 个，耗时 ${elapsed}s`);
+  log(`[publish] 终验通过: ${selected.length} 卷远端 asset size/digest 全部一致，每 release asset 数 ≤${ASSET_MAX_PER_RELEASE}`);
+  log(`[publish] current.json 已回填 asset_id 与 url（本次覆盖 ${selected.length} 卷，其中变更 ${filled} 条）；manifest_sha256 保持 ${curObj.manifest_sha256.slice(0, 16)}…（gen=${curObj.gen}，指向 manifest-${curObj.gen}.json）`);
+}
+
+function uploadAssets(tag: string, vols: VolRec[]): void {
+  const files = vols.map((v) => path.join(STAGING, v.name));
+  runGh(["release", "upload", tag, ...files, "--clobber", "--repo", GH_REPO], GH_UPLOAD_TIMEOUT_MS);
+}
+
+// ---------- 外部恢复演练（--drill <dir>） ----------
+
+function curlTo(url: string, dest: string, timeoutMs: number): void {
+  runWithRetry(
+    `curl ${url}`,
+    ["curl", "-fsSL", "--connect-timeout", "30", "--max-time", "3600", "-o", dest, url],
+    timeoutMs,
+    CURL_RETRY,
+  );
+}
+
+function curlBytes(url: string): Uint8Array {
+  const dest = path.join("/tmp", `media-pack-curl-${process.pid}-${Date.now()}.tmp`);
+  try {
+    curlTo(url, dest, 120_000);
+    return new Uint8Array(readFileSync(dest));
+  } finally {
+    rmSync(dest, { force: true });
+  }
+}
+
+async function runDrill(dirArg: string): Promise<void> {
+  const t0 = Date.now();
+  const dir = path.resolve(dirArg);
+  if (existsSync(dir) && readdirSync(dir).length > 0) {
+    die(`演练目录非空: ${dir}（验收要求空目录，请先清空）`);
+  }
+  const volDir = path.join(dir, "volumes");
+  const restoreDir = path.join(dir, "restore");
+  mkdirSync(volDir, { recursive: true });
+  mkdirSync(restoreDir, { recursive: true });
+
+  // 1/5 公网拉 current.json（raw.githubusercontent，无鉴权）
+  const currentUrl = `${RAW_MANIFEST_BASE}/current.json`;
+  log(`[drill] 1/5 拉取 ${currentUrl}`);
+  const cur = JSON.parse(curlBytes(currentUrl).toString()) as CurrentFile;
+  if (typeof cur.gen !== "number" || typeof cur.manifest_sha256 !== "string") die("远程 current.json 结构非法");
+
+  // 2/5 公网拉 manifest-<gen>.json 并校验 sha256
+  const manifestUrl = `${RAW_MANIFEST_BASE}/manifest-${cur.gen}.json`;
+  log(`[drill] 2/5 拉取 ${manifestUrl} 并校验 sha256`);
+  const mBytes = curlBytes(manifestUrl);
+  const mSha = new Bun.CryptoHasher("sha256").update(mBytes).digest("hex");
+  if (mSha !== cur.manifest_sha256) {
+    die(`manifest sha256 与远程 current.json 不一致: current=${cur.manifest_sha256} actual=${mSha}`);
+  }
+  const manifest = JSON.parse(mBytes.toString()) as Manifest;
+  if (manifest.format_version !== 1) die(`format_version=${manifest.format_version}，预期 1`);
+  log(`[drill] manifest 校验通过: gen=${cur.gen}, 对象 ${manifest.objects.length}, 卷 ${manifest.volumes.length}`);
+
+  // 3/5 卷 URL 解析：优先远程 current.json；url 未回填（指针未提交）时回退本地回填值
+  const nullUrl = cur.volumes.filter((v) => !v.url);
+  const urls = new Map<string, string>();
+  if (nullUrl.length === 0) {
+    for (const v of cur.volumes) urls.set(v.name, v.url as string);
+    log(`[drill] 3/5 卷下载 URL 全部来自远程 current.json（${urls.size} 条 browser_download_url，纯公网链路）`);
+  } else {
+    log(`[drill] 3/5 远程 current.json 有 ${nullUrl.length}/${cur.volumes.length} 条 url 为 null（回填尚未 git 提交推送）——回退读取本地 manifest/current.json 的 url 字段`);
+    const localCur = JSON.parse(readFileSync(path.join(MANIFEST_DIR, "current.json"), "utf8")) as CurrentFile;
+    if (localCur.gen !== cur.gen || localCur.manifest_sha256 !== cur.manifest_sha256) {
+      die("本地 current.json 与远程指针不同代（gen 或 manifest_sha256 不一致），拒绝回退");
+    }
+    for (const v of localCur.volumes) if (v.url) urls.set(v.name, v.url);
+  }
+  const manifestVolByName = new Map(manifest.volumes.map((v) => [v.name, v]));
+  if (cur.volumes.length !== manifest.volumes.length) {
+    die(`current 与 manifest 卷数不一致: current=${cur.volumes.length} manifest=${manifest.volumes.length}`);
+  }
+  for (const cv of cur.volumes) {
+    const mv = manifestVolByName.get(cv.name);
+    if (!mv) die(`current.json 卷不在 manifest: ${cv.name}`);
+    if (cv.sha256 !== mv.sha256) die(`current 与 manifest 卷 sha256 不一致: ${cv.name}`);
+    if (!urls.has(cv.name)) die(`卷无下载 URL: ${cv.name}`);
+  }
+
+  // 4/5 逐卷：公网下载 → 整卷 sha256 校验 → 按对象 offset/size 解包恢复 → 删卷控磁盘
+  const objsByVol = new Map<string, ObjRec[]>();
+  for (const o of manifest.objects) {
+    const list = objsByVol.get(o.volume);
+    if (list) list.push(o); else objsByVol.set(o.volume, [o]);
+  }
+  let downloadedBytes = 0;
+  let restored = 0;
+  let consistent = 0;
+  let diff = 0;
+  let volDone = 0;
+  for (const v of manifest.volumes) {
+    const dest = path.join(volDir, v.name);
+    curlTo(urls.get(v.name) as string, dest, 60 * 60_000);
+    downloadedBytes += v.size;
+    const st = statSync(dest);
+    if (st.size !== v.size) die(`下载卷尺寸不符: ${v.name} want=${v.size} got=${st.size}`);
+    const sha = await hashFile(dest);
+    if (sha !== v.sha256) die(`下载卷 sha256 不符: ${v.name} manifest=${v.sha256} actual=${sha}`);
+    for (const o of objsByVol.get(v.name) ?? []) {
+      if (o.key.startsWith("/") || o.key.includes("..") || o.key.includes("\\")) die(`非法 key: ${o.key}`);
+      const out = path.join(restoreDir, o.key);
+      mkdirSync(path.dirname(out), { recursive: true });
+      const fh = new Bun.CryptoHasher("sha256");
+      const sink = Bun.file(out).writer();
+      let read = 0;
+      for await (const chunk of Bun.file(dest).slice(o.offset, o.offset + o.size).stream()) {
+        const c = chunk as Uint8Array;
+        fh.update(c);
+        sink.write(c);
+        read += c.byteLength;
+      }
+      await sink.end();
+      restored += 1;
+      if (read === o.size && fh.digest("hex") === o.sha256) {
+        consistent += 1;
+      } else {
+        diff += 1;
+        log(`[drill] 对象校验失败: ${o.key}（read=${read} size=${o.size}）`);
+      }
+    }
+    rmSync(dest);
+    volDone += 1;
+    log(`[drill] 4/5 ${v.name} 整卷 sha256 一致（${volDone}/${manifest.volumes.length} 卷，已恢复 ${restored}/${manifest.objects.length} 对象）`);
+  }
+
+  // 5/5 汇总验收
+  const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+  log(`[drill] 5/5 恢复 ${restored} / 一致 ${consistent} / 差异 ${diff}`);
+  log(`[drill] 卷校验 ${volDone}/${manifest.volumes.length} 全部 sha256 一致；公网下载 ${downloadedBytes} 字节，恢复目录 ${restoreDir}，耗时 ${elapsed}s`);
+  if (diff !== 0 || restored !== manifest.objects.length || consistent !== manifest.objects.length) {
+    die(`演练未通过: 恢复 ${restored} / 一致 ${consistent} / 差异 ${diff}（期望 ${manifest.objects.length} 全恢复全一致零差异）`);
+  }
+  log(`[drill] 通过: ${manifest.objects.length} 对象全部经公网 URL 恢复且逐一 sha256 与公网 manifest 对账一致`);
+}
+
 // ---------- 入口 ----------
 
 const args = process.argv.slice(2);
@@ -590,9 +954,23 @@ if (args.includes("--initial")) {
   await runInitial();
 } else if (args.includes("--verify")) {
   await runVerify();
+} else if (args.includes("--publish")) {
+  const onlyIdx = args.indexOf("--only");
+  const only = onlyIdx >= 0 ? args[onlyIdx + 1] : undefined;
+  await runPublish(only);
+} else if (args.includes("--drill")) {
+  const i = args.indexOf("--drill");
+  const dirArg = i >= 0 ? args[i + 1] : undefined;
+  if (!dirArg) {
+    console.error("用法: --drill <空目录>（如 /tmp/cdn-media-drill）");
+    process.exit(2);
+  }
+  await runDrill(dirArg);
 } else {
-  console.error("用法: bun cdn-media/tools/media-pack.ts --initial | --verify");
-  console.error("  --initial  扫描 static/x-media 按月打包 USTAR 卷到 cdn-media/staging，生成 manifest 与 current.json");
-  console.error("  --verify   恢复演练：manifest + 卷 → 解包恢复 → 与源目录全量 sha256 对账");
+  console.error("用法: bun cdn-media/tools/media-pack.ts --initial | --verify | --publish [--only YYYY-MM] | --drill <dir>");
+  console.error("  --initial            扫描 static/x-media 按月打包 USTAR 卷到 cdn-media/staging，生成 manifest 与 current.json");
+  console.error("  --verify             本地恢复演练：manifest + 卷 → 解包恢复 → 与源目录全量 sha256 对账");
+  console.error("  --publish [--only M] 上传 staging 卷到 GitHub Releases（按月 release，幂等可重入），完成后回填 current.json 的 asset_id 与 url");
+  console.error("  --drill <dir>        外部恢复演练：空目录，只经公网 URL 拉取 current/manifest/卷并全量恢复 sha256 对账");
   process.exit(2);
 }
