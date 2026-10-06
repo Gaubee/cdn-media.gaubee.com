@@ -5,628 +5,628 @@
   "volumes": [
     {
       "asset_id": 615171231,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-1970-01/vol-1970-01-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615171231",
       "sha256": "f2b1790222c333449d7c52709185fc8306275c1e5e09d556fb839a4c1734d4b6",
       "name": "vol-1970-01-001.tar"
     },
     {
       "asset_id": 615172301,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2017-12/vol-2017-12-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615172301",
       "sha256": "49c3eaca8f5bfa9ab88384b3913a620d24d54e7ff04cd2601099720cc5aff644",
       "name": "vol-2017-12-001.tar"
     },
     {
       "asset_id": 615172433,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2018-01/vol-2018-01-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615172433",
       "sha256": "85f6d21aff9f63583b429943708700051f93aa58aef9a19a82f3e601890b92c5",
       "name": "vol-2018-01-001.tar"
     },
     {
       "asset_id": 615172584,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2018-03/vol-2018-03-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615172584",
       "sha256": "bf08c0509c13d060c2b5ef56449221101bc4ffe4e82de41b6e20c94985a3468c",
       "name": "vol-2018-03-001.tar"
     },
     {
       "asset_id": 615172980,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2018-04/vol-2018-04-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615172980",
       "sha256": "f9e87c28ca1922fc682e2d7e672698f83f2249dd6f382aa90b50efe63449c697",
       "name": "vol-2018-04-001.tar"
     },
     {
       "asset_id": 615173488,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2018-05/vol-2018-05-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615173488",
       "sha256": "39d5b0ef905a5d73936eaed6a563704c93cbe0e79f7e74f1fdb3ff1356779768",
       "name": "vol-2018-05-001.tar"
     },
     {
       "asset_id": 615173707,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2018-08/vol-2018-08-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615173707",
       "sha256": "a467144655e10cc38cbc0420b8b23c08fa0a991f742e49ee23182c31e62dfbba",
       "name": "vol-2018-08-001.tar"
     },
     {
       "asset_id": 615173942,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2018-10/vol-2018-10-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615173942",
       "sha256": "838a2f624f3f7b2f55547b9699a56044648d02a8f4553d226c2a91328e4da95d",
       "name": "vol-2018-10-001.tar"
     },
     {
       "asset_id": 615174233,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2018-11/vol-2018-11-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615174233",
       "sha256": "b45ef55963479fe067fdb7ff018b66669a4f5916577b76fc19c603becd0a4b7b",
       "name": "vol-2018-11-001.tar"
     },
     {
       "asset_id": 615174620,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2018-12/vol-2018-12-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615174620",
       "sha256": "0f01fb96b8a691bef994e827cfc636e35fc48015c489bbfe2bb0be644a2d12c7",
       "name": "vol-2018-12-001.tar"
     },
     {
       "asset_id": 615175721,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2019-03/vol-2019-03-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615175721",
       "sha256": "bd94c0a648c4b5ea2d91f1bce680633d79678fc0c6697266301508d26688e351",
       "name": "vol-2019-03-001.tar"
     },
     {
       "asset_id": 615176218,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2019-04/vol-2019-04-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615176218",
       "sha256": "612e9275f6a7c3cb164ea7ebea031041019ed162de5a6dc59a1870e5ce478aed",
       "name": "vol-2019-04-001.tar"
     },
     {
       "asset_id": 615176578,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2019-07/vol-2019-07-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615176578",
       "sha256": "973c672d75649e2758f23ebee3ed64380b28970a86b5af04316cbbf94b504d09",
       "name": "vol-2019-07-001.tar"
     },
     {
       "asset_id": 615176957,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2019-08/vol-2019-08-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615176957",
       "sha256": "fc1259c7f5c5e05a311622fecf9ead32ddb2bb6b35b08647186093c9a52dd924",
       "name": "vol-2019-08-001.tar"
     },
     {
       "asset_id": 615177268,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2019-09/vol-2019-09-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615177268",
       "sha256": "529a0a227bf60286cd11eb39f6739e4144035d583fadeae856a02375c9a4768a",
       "name": "vol-2019-09-001.tar"
     },
     {
       "asset_id": 615177674,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2019-10/vol-2019-10-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615177674",
       "sha256": "7f12fa653d7065be6e89181f8637a41a166d26518e6e848daafc90db37bdb393",
       "name": "vol-2019-10-001.tar"
     },
     {
       "asset_id": 615178300,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2019-11/vol-2019-11-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615178300",
       "sha256": "7c8d7412f48447232cf2f64abc47cac95f16bb272b0b52f0899a94a568858dbb",
       "name": "vol-2019-11-001.tar"
     },
     {
       "asset_id": 615178620,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2019-12/vol-2019-12-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615178620",
       "sha256": "0e691991b25fb349294caea1aa83561c3bd58d6fc09ecdde913963b0c63ae971",
       "name": "vol-2019-12-001.tar"
     },
     {
       "asset_id": 615179026,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-01/vol-2020-01-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615179026",
       "sha256": "5478f3ee9b5d346e68a0e67c7fe4dbf8cc23ccd3df331f7a8348ed13c191a572",
       "name": "vol-2020-01-001.tar"
     },
     {
       "asset_id": 615179269,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-02/vol-2020-02-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615179269",
       "sha256": "b6aec260969f733d843dd09f5344cbdf8a0ceab372c0257d9b24bcfb0ec6a987",
       "name": "vol-2020-02-001.tar"
     },
     {
       "asset_id": 615179645,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-03/vol-2020-03-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615179645",
       "sha256": "e7e632bb2914c1cf16a1a08063766049b0d45ee8c5fd0017e675cc8e803be144",
       "name": "vol-2020-03-001.tar"
     },
     {
       "asset_id": 615180108,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-04/vol-2020-04-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615180108",
       "sha256": "00db4d84e6bec1b199e5c286260fc6417e85bfef25cb45341fca5990d61ea5dd",
       "name": "vol-2020-04-001.tar"
     },
     {
       "asset_id": 615192876,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-05/vol-2020-05-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615192876",
       "sha256": "e8645ab936b047eaa6318d75b62ef2b235f9bf61a4f908b3cbf3eed0b0d27cff",
       "name": "vol-2020-05-001.tar"
     },
     {
       "asset_id": 615193072,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-06/vol-2020-06-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615193072",
       "sha256": "49a44c709feee3f3626550de2fc07fe2d03c3863d5857a6823f373870f02b1c5",
       "name": "vol-2020-06-001.tar"
     },
     {
       "asset_id": 615193263,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-07/vol-2020-07-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615193263",
       "sha256": "858b5293eaf22e90e8670d80cffd2b685322d1a902d964e17d38fef2963a3968",
       "name": "vol-2020-07-001.tar"
     },
     {
       "asset_id": 615193466,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-08/vol-2020-08-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615193466",
       "sha256": "7ee233b1ae3ef5ef48ad04bed8202e896c325ac16cd45d16f3ed2d4076f8317f",
       "name": "vol-2020-08-001.tar"
     },
     {
       "asset_id": 615193644,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-09/vol-2020-09-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615193644",
       "sha256": "10574114d5acfebabc94a4348937213a28045adb02108e85e8d22817701576d2",
       "name": "vol-2020-09-001.tar"
     },
     {
       "asset_id": 615193899,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-10/vol-2020-10-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615193899",
       "sha256": "ef3fbc1b1620513cbb372234227f1d90c24f657a4bc31ec7225060439a986353",
       "name": "vol-2020-10-001.tar"
     },
     {
       "asset_id": 615170565,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2020-11/vol-2020-11-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615170565",
       "sha256": "8f38ccc570b4ab94cc3d6c79bc06ab4a10ee940a756e7b4e768afa841bf86f5e",
       "name": "vol-2020-11-001.tar"
     },
     {
       "asset_id": 615194173,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2021-01/vol-2021-01-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615194173",
       "sha256": "56d6dd2b509a461fb6469eab26f0b8497135da259f781b84c834d53540dceb0e",
       "name": "vol-2021-01-001.tar"
     },
     {
       "asset_id": 615194326,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2021-04/vol-2021-04-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615194326",
       "sha256": "3c3abfe6aca4d4a7380c287f9bf50589d3f98099ea99cbdcf5ba7b0569b93ae6",
       "name": "vol-2021-04-001.tar"
     },
     {
       "asset_id": 615194498,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2021-05/vol-2021-05-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615194498",
       "sha256": "3dca1c1c949c15531bcb9dc0d18d02695a9b1e6e77b65d702c82d1bdbf648d29",
       "name": "vol-2021-05-001.tar"
     },
     {
       "asset_id": 615194744,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2021-06/vol-2021-06-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615194744",
       "sha256": "4e8b35f37bad030a0b6fd97ac09329d3d8b2cf4f66021801d83d2895c93df7a0",
       "name": "vol-2021-06-001.tar"
     },
     {
       "asset_id": 615194928,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2021-07/vol-2021-07-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615194928",
       "sha256": "49269994cc2ddb5c736b10d6edee4866714f6835f95e99899b27b8635bbc506f",
       "name": "vol-2021-07-001.tar"
     },
     {
       "asset_id": 615144212,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2021-08/vol-2021-08-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615144212",
       "sha256": "851802ddb15f73bfc1bb5a8cff1076cf1a7cf83cdecea4b6eb1e53bcef7c200a",
       "name": "vol-2021-08-001.tar"
     },
     {
       "asset_id": 615195113,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2021-09/vol-2021-09-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615195113",
       "sha256": "de35c549c136716755957a8c5e8ea9df7e3911df439345c21d25bf95f8b4fc35",
       "name": "vol-2021-09-001.tar"
     },
     {
       "asset_id": 615195261,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2021-10/vol-2021-10-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615195261",
       "sha256": "ab8a55c2acbd705e086fe4b5cf7dfd61dbf926a157b5b095f19d99e5a7f84156",
       "name": "vol-2021-10-001.tar"
     },
     {
       "asset_id": 615195419,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2021-12/vol-2021-12-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615195419",
       "sha256": "a57f6975f3e7d3b89ba570555d021185deef13d4219c9272f75338318946d6a6",
       "name": "vol-2021-12-001.tar"
     },
     {
       "asset_id": 615195565,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2022-02/vol-2022-02-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615195565",
       "sha256": "c5c8111c0f9757422b80f1d9b20913ad33afea03afc48f8f063e2e9dfdb185e1",
       "name": "vol-2022-02-001.tar"
     },
     {
       "asset_id": 615195751,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2022-03/vol-2022-03-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615195751",
       "sha256": "7fb58b0c9ef3e326f1ce9a0c2bacdca59c3445fb02c1213b945d056723e0363d",
       "name": "vol-2022-03-001.tar"
     },
     {
       "asset_id": 615195888,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2022-05/vol-2022-05-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615195888",
       "sha256": "751a8cf1d80d98907ffdf7fec62676cbed20b61d9e801217b10a9caee56132c7",
       "name": "vol-2022-05-001.tar"
     },
     {
       "asset_id": 615196049,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2022-06/vol-2022-06-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615196049",
       "sha256": "945de28f19ce8a905a7bd1f58c1b66bd3d9ae9b4f634d734a4c945a959667f0a",
       "name": "vol-2022-06-001.tar"
     },
     {
       "asset_id": 615196207,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2022-07/vol-2022-07-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615196207",
       "sha256": "895d08f696468fe69df32d7a1b77f62a66d5ee7f084d6e457a35cc0b4212fae8",
       "name": "vol-2022-07-001.tar"
     },
     {
       "asset_id": 615196440,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2022-08/vol-2022-08-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615196440",
       "sha256": "4dcf2c35cb4d2f8c29490264c4923956161cdb787565bff764670e5064530ba7",
       "name": "vol-2022-08-001.tar"
     },
     {
       "asset_id": 615196654,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2022-09/vol-2022-09-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615196654",
       "sha256": "490fc4862cb27d55e091268cc6b705a932d4ffb7f660c61e7f8fd7c762ebda19",
       "name": "vol-2022-09-001.tar"
     },
     {
       "asset_id": 615196890,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2022-10/vol-2022-10-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615196890",
       "sha256": "80bef22bacb5b3f0c10c3154693ead110296b0891e442ca4987d29013aca3cd8",
       "name": "vol-2022-10-001.tar"
     },
     {
       "asset_id": 615197134,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2022-11/vol-2022-11-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615197134",
       "sha256": "e674daa1b6ed7c8e3bdef63abf23253ad453ff4515a98c34935b1ff5ac480c53",
       "name": "vol-2022-11-001.tar"
     },
     {
       "asset_id": 615197364,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2022-12/vol-2022-12-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615197364",
       "sha256": "7ee0dc70eef17fd7eebc09def82f2d64d729b6fea5002ea2713e74a287adbfc4",
       "name": "vol-2022-12-001.tar"
     },
     {
       "asset_id": 615197605,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-01/vol-2023-01-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615197605",
       "sha256": "a2e5252e8c1ce223132a087ac5a24d3e133f74f776a5373c825ff12af3183cce",
       "name": "vol-2023-01-001.tar"
     },
     {
       "asset_id": 615197864,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-02/vol-2023-02-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615197864",
       "sha256": "ece62e72d034899f1943d26081aaed859d1297c7edd4b054115ab5e9e4f47020",
       "name": "vol-2023-02-001.tar"
     },
     {
       "asset_id": 615198144,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-03/vol-2023-03-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615198144",
       "sha256": "bad32a3de6bfa5b9ddf5c25c3573dc0ee55d0fb3148291d91f70f8d4394a2fae",
       "name": "vol-2023-03-001.tar"
     },
     {
       "asset_id": 615198382,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-04/vol-2023-04-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615198382",
       "sha256": "35fb3afee658102e360aa6a0a879c82a4035d49315e6239b8f505911bc742dd4",
       "name": "vol-2023-04-001.tar"
     },
     {
       "asset_id": 615198646,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-05/vol-2023-05-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615198646",
       "sha256": "a9d6298dec38db19562c5a4e47ccf3557381066a44e7c8c0088ade15887472cd",
       "name": "vol-2023-05-001.tar"
     },
     {
       "asset_id": 615198875,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-06/vol-2023-06-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615198875",
       "sha256": "ab6606804c575d4d1c810960f0d7fc5d1e76894145894b0049e6cc5257bb40a2",
       "name": "vol-2023-06-001.tar"
     },
     {
       "asset_id": 615199072,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-07/vol-2023-07-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615199072",
       "sha256": "b9e8cbff7bf30776fee575b55ece2d6bbbe683612dff0826a3a66a56b38d2cc1",
       "name": "vol-2023-07-001.tar"
     },
     {
       "asset_id": 615199318,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-08/vol-2023-08-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615199318",
       "sha256": "d2e5095ac5f2f86f7d5ba739a124fe0af15da8f6b5f3cccb37bb9a33d39571df",
       "name": "vol-2023-08-001.tar"
     },
     {
       "asset_id": 615199453,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-09/vol-2023-09-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615199453",
       "sha256": "61d7660b01f24fc8a00ff13a1aab21215a9211b1dede898b10c6f23d4f002d54",
       "name": "vol-2023-09-001.tar"
     },
     {
       "asset_id": 615199625,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-10/vol-2023-10-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615199625",
       "sha256": "b2ea6da9997ed1fd7a041dec39e51ad7ed911080368cb9f3de58aca4416d6c7d",
       "name": "vol-2023-10-001.tar"
     },
     {
       "asset_id": 615199823,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-11/vol-2023-11-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615199823",
       "sha256": "7b55b6755294dcdc557ef900c07c17924855f2433b81f3f93a9612b5547965a9",
       "name": "vol-2023-11-001.tar"
     },
     {
       "asset_id": 615200712,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2023-12/vol-2023-12-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615200712",
       "sha256": "755f220b1e3f9c115fcabd541e234137935074b1651afbfd0b8241b2f79ed2cb",
       "name": "vol-2023-12-001.tar"
     },
     {
       "asset_id": 615200929,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-01/vol-2024-01-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615200929",
       "sha256": "8e516c82a8d9204bb3da06042b3faa3303cdb75877bc7032d9140ed5ccbcfe68",
       "name": "vol-2024-01-001.tar"
     },
     {
       "asset_id": 615201104,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-02/vol-2024-02-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615201104",
       "sha256": "68e75d63496d7c7a6e04f659bd7fe9966a4240c447aad75345c9d0b8118bad5b",
       "name": "vol-2024-02-001.tar"
     },
     {
       "asset_id": 615201290,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-03/vol-2024-03-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615201290",
       "sha256": "175ce42e861d3debaf211f8ba4ab3a509d28bf8765d390b31e6b75c96bb6b382",
       "name": "vol-2024-03-001.tar"
     },
     {
       "asset_id": 615201466,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-04/vol-2024-04-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615201466",
       "sha256": "a934aa51ad81ccf42a9ac7c52b02956b68362ebb49c157a41c80a723903d852b",
       "name": "vol-2024-04-001.tar"
     },
     {
       "asset_id": 615201655,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-05/vol-2024-05-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615201655",
       "sha256": "b10eed84e9d8a17b732d197cd8452f07b11e6e1da9cb9597ede1218c4a7c5fd5",
       "name": "vol-2024-05-001.tar"
     },
     {
       "asset_id": 615201857,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-06/vol-2024-06-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615201857",
       "sha256": "ccfb5378fb664ef3f7f2fd9ac380a305f145fc23e17ea7c2cac7e7e7b72029fa",
       "name": "vol-2024-06-001.tar"
     },
     {
       "asset_id": 615202045,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-07/vol-2024-07-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615202045",
       "sha256": "7863108c4eb0d539fded687d17d039ed617449ae8cd75e1b325fc012063077dd",
       "name": "vol-2024-07-001.tar"
     },
     {
       "asset_id": 615202329,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-08/vol-2024-08-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615202329",
       "sha256": "ecc8f66c777e276c7fa99dddcfd277fa77dec61a01f836a99828ca0884857d98",
       "name": "vol-2024-08-001.tar"
     },
     {
       "asset_id": 615202767,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-09/vol-2024-09-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615202767",
       "sha256": "74061f16c535a678eb0a284e658f7c513d100ac9de54d1508e8c1bb3f296c302",
       "name": "vol-2024-09-001.tar"
     },
     {
       "asset_id": 615202943,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-10/vol-2024-10-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615202943",
       "sha256": "1d6d06aab26ad39fc71f6e83bb9716c967af362ba4d22cb96e2e6618e31769b1",
       "name": "vol-2024-10-001.tar"
     },
     {
       "asset_id": 615203116,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-11/vol-2024-11-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615203116",
       "sha256": "bf67f505ce06e9a5e58e68ca43b454ba1a45eba47c67a1b67458247aea9b8c16",
       "name": "vol-2024-11-001.tar"
     },
     {
       "asset_id": 615203341,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2024-12/vol-2024-12-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615203341",
       "sha256": "3436533d93cd6fc81fccb6a9580eb8741bd00d0a50e0150bf87dbf474434dbb3",
       "name": "vol-2024-12-001.tar"
     },
     {
       "asset_id": 615203498,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-01/vol-2025-01-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615203498",
       "sha256": "3261b83264ec9c90b1b56220f9955dad78e911d21d239b45c8b9bd83da8be3ac",
       "name": "vol-2025-01-001.tar"
     },
     {
       "asset_id": 615203713,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-02/vol-2025-02-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615203713",
       "sha256": "7722a1b8a491b8a709c1d62cfa2c29ec8762f756fb428c3e019542f9926c0ee6",
       "name": "vol-2025-02-001.tar"
     },
     {
       "asset_id": 615203876,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-03/vol-2025-03-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615203876",
       "sha256": "85e3faee367e5109df77e1771fd98e6be1283902df1d253a137163e924c11cbd",
       "name": "vol-2025-03-001.tar"
     },
     {
       "asset_id": 615203994,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-04/vol-2025-04-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615203994",
       "sha256": "5c4f183a074c847aa58fc8cb025b51690f2316e943befeabff21580c5136b115",
       "name": "vol-2025-04-001.tar"
     },
     {
       "asset_id": 615204147,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-05/vol-2025-05-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615204147",
       "sha256": "62b148baf66bf745ac5092f81714bd44f477e20abfbee293f8830ca750c0f638",
       "name": "vol-2025-05-001.tar"
     },
     {
       "asset_id": 615204323,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-06/vol-2025-06-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615204323",
       "sha256": "f9b73814ee2c300ff514fa553ce4209d0cb969ad14c216e881b8cfffbefe04b5",
       "name": "vol-2025-06-001.tar"
     },
     {
       "asset_id": 615204520,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-07/vol-2025-07-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615204520",
       "sha256": "858f87314bea235f4d9ea52fbf3cdaec3fca84a8e21da28dad9632d6d4bfb3cd",
       "name": "vol-2025-07-001.tar"
     },
     {
       "asset_id": 615204695,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-08/vol-2025-08-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615204695",
       "sha256": "28320db4e1e057cf1c69ae9a032a49d95a65baceaea66003d76ae8d7402d29f3",
       "name": "vol-2025-08-001.tar"
     },
     {
       "asset_id": 615204830,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-09/vol-2025-09-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615204830",
       "sha256": "dda063744ff6f89d1b2f8ad76410901d79489b02e54a4816102bb47e22cfb936",
       "name": "vol-2025-09-001.tar"
     },
     {
       "asset_id": 615204976,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-10/vol-2025-10-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615204976",
       "sha256": "c6996f0a3845c8f3f1dc812b8c804f042de587c64e9ad2962ae6ae957551610c",
       "name": "vol-2025-10-001.tar"
     },
     {
       "asset_id": 615205200,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-11/vol-2025-11-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615205200",
       "sha256": "ba034e0c6471f47fcc0bcfbe456bbcab4bae6075445ecc578f0216b3fb411066",
       "name": "vol-2025-11-001.tar"
     },
     {
       "asset_id": 615205417,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2025-12/vol-2025-12-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615205417",
       "sha256": "9014ad96ed65ada3aad5f60c1d98b61430a748604d4059ba54fecec55fbb1b0d",
       "name": "vol-2025-12-001.tar"
     },
     {
       "asset_id": 615205686,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-02/vol-2026-02-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615205686",
       "sha256": "d16edc88248208db1570e53e561cc73e0cc219a93b6a79fa9969a3a4a799074c",
       "name": "vol-2026-02-001.tar"
     },
     {
       "asset_id": 615205866,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-03/vol-2026-03-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615205866",
       "sha256": "ee2572353d1c51f9462963946f8b203e833ea9f0f46bdf1957d0c37385b01f0c",
       "name": "vol-2026-03-001.tar"
     },
     {
       "asset_id": 615205998,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-04/vol-2026-04-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615205998",
       "sha256": "3369500ecac9bd05a303f5c2b40a4dcd17344ea498f04f89bb219115f06c34a8",
       "name": "vol-2026-04-001.tar"
     },
     {
       "asset_id": 615206245,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-05/vol-2026-05-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615206245",
       "sha256": "eecb8cd274194863eacecd54c0e4cb2a2645263ba20a3c46a6c70fdec6dd69ee",
       "name": "vol-2026-05-001.tar"
     },
     {
       "asset_id": 615207221,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-06/vol-2026-06-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615207221",
       "sha256": "015c1228d6219c7c21457df0df06b6eaf9ec8aa315a0445cb2d93791894e52c8",
       "name": "vol-2026-06-001.tar"
     },
     {
       "asset_id": 615207451,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-07/vol-2026-07-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615207451",
       "sha256": "c03a3ae6c5a58bcc548e1ec698e0a87a76596ed98fd11da62cb2b2bd8ed79346",
       "name": "vol-2026-07-001.tar"
     },
     {
       "asset_id": 615210036,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-08/vol-2026-08-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615210036",
       "sha256": "09e4b202da3bbe67f197429fa5f5c9d4a5d6254dfae4fdfd53c964f51dd0fbbd",
       "name": "vol-2026-08-001.tar"
     },
     {
       "asset_id": 615211422,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-09/vol-2026-09-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615211422",
       "sha256": "d1cc190c9ea926a5a21d34dc203ff83ed8f2fd4e14d0a0772a3ed75b1fb49045",
       "name": "vol-2026-09-001.tar"
     },
     {
       "asset_id": 615213247,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-001.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615213247",
       "sha256": "83574d9ec5a1519a9574b423c9e92df706f8b9ac61fb9eed6483eab66cae93b4",
       "name": "vol-2026-10-001.tar"
     },
     {
       "asset_id": 615213248,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-002.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615213248",
       "sha256": "54a53d6555611197913649d78520d20fb709dc26bc06d5a80a1e61c155de840e",
       "name": "vol-2026-10-002.tar"
     },
     {
       "asset_id": 615213245,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-003.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615213245",
       "sha256": "3c0a6577c8495f0f7e6b58ea537ce13723f7d9115eff3a31911cff07fea55fef",
       "name": "vol-2026-10-003.tar"
     },
     {
       "asset_id": 615213246,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-004.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615213246",
       "sha256": "7f8ae732ad772e4c303e9ea79070a5cc8468d9786a27ab824fc5e42b91e3fb26",
       "name": "vol-2026-10-004.tar"
     },
     {
       "asset_id": 615213244,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-005.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615213244",
       "sha256": "d0a52c24c226589a1e330525f33bf2c0281973b23a25a2ddc52f38145f7d17be",
       "name": "vol-2026-10-005.tar"
     },
     {
       "asset_id": 615221339,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-006.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615221339",
       "sha256": "a4c5a6a741aefd10dc81ce114d0f6546b72b71b33d8dc838ac98254d7f17681f",
       "name": "vol-2026-10-006.tar"
     },
     {
       "asset_id": 615221337,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-007.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615221337",
       "sha256": "61af29670ff0f5bdcb39e8128d4200f7a87130e39818160df77bc1690d13815e",
       "name": "vol-2026-10-007.tar"
     },
     {
       "asset_id": 615221369,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-008.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615221369",
       "sha256": "b0e98b0bbf6a18ff8871ebb256474828eb098e5ccc0476db478f5e02ea43e0aa",
       "name": "vol-2026-10-008.tar"
     },
     {
       "asset_id": 615221448,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-009.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615221448",
       "sha256": "179063aa3eef5593537580797c21927e6d1b1eb3eaef17895f646a1ce3a7f308",
       "name": "vol-2026-10-009.tar"
     },
     {
       "asset_id": 615221478,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-010.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615221478",
       "sha256": "24388a8a475ec668b6300b00056ac382d4e84beae833e59338e7a1e3cfea10f7",
       "name": "vol-2026-10-010.tar"
     },
     {
       "asset_id": 615228140,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-011.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615228140",
       "sha256": "fcec983bab73dc98ee728c08737f609f9817052395373f9e9f4f8e9a5f300446",
       "name": "vol-2026-10-011.tar"
     },
     {
       "asset_id": 615228166,
-      "url": "https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-2026-10/vol-2026-10-012.tar",
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/615228166",
       "sha256": "d758af46951edf2413a901af702fa98dc881d575a128222814e81fd3d4f3e5f2",
       "name": "vol-2026-10-012.tar"
     }
   ],
-  "updated_at": "2026-10-06T10:46:52.996Z"
+  "updated_at": "2026-10-06T14:28:23.829Z"
 }
