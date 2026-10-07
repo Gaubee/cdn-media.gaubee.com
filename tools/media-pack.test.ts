@@ -12,13 +12,13 @@
 //   覆盖、崩溃残留可重入、补丁后 --initial 仍 fail-closed）
 //
 // sandbox 结构：脚本以 import.meta.dir 推导路径（TOOLS_DIR/../..），因此把
-// media-pack.ts 拷进 <tmp>/media/tools/、源目录造在 <tmp>/static/x-media/ 即可
-// 完全隔离真实仓库。
+// media-pack.ts 拷进 <tmp>/media/tools/、打包源造在 <tmp>/media/staging/x/（Phase 3
+// 默认源 = <media 仓>/staging/x，canonical key 布局）即可完全隔离真实仓库。
 
 import { describe, expect, test } from "bun:test";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-import { apiAssetUrl, classifyRemoteAsset, GH_REPO, mergePublishedPointers, monthOfVolume, planUploads, type GhAsset, type GhRelease } from "./media-pack.ts";
+import { apiAssetUrl, classifyRemoteAsset, GH_REPO, mergePublishedPointers, monthOfVolume, planUploads, resolveSourceDir, scanSource, type GhAsset, type GhRelease } from "./media-pack.ts";
 
 const SRC = path.resolve(import.meta.dir, "media-pack.ts");
 
@@ -228,6 +228,60 @@ describe("planUploads（r7 P1-5 上传前预检）", () => {
   });
 });
 
+// ---------- Phase 3：打包源参数化（staging canonical 布局 + --source 覆盖） ----------
+
+describe("resolveSourceDir / scanSource", () => {
+  test("缺省源 = <media 仓>/staging/x（canonical key 布局）", () => {
+    const dir = resolveSourceDir();
+    expect(dir.endsWith(path.join("staging", "x"))).toBe(true);
+  });
+
+  test("--source 显式目录按原样解析（月份目录根语义不变）", () => {
+    expect(resolveSourceDir("/some/legacy/static/x-media")).toBe("/some/legacy/static/x-media");
+  });
+
+  test("scanSource 扫 canonical 布局：月份聚簇 + rel=<月>/<文件>（装箱端拼 x/ 前缀成 canonical key）", () => {
+    const root = mkdtempSync(path.join("/tmp", "mpack-scan-"));
+    try {
+      const monthRoot = path.join(root, "x");
+      mkdirSync(path.join(monthRoot, "2026-10"), { recursive: true });
+      writeFileSync(path.join(monthRoot, "2026-10", "a-1.jpg"), Buffer.from("img"));
+      const months = scanSource(monthRoot);
+      expect([...months.keys()]).toEqual(["2026-10"]);
+      const files = months.get("2026-10")!;
+      expect(files.length).toBe(1);
+      expect(files[0]!.rel).toBe("2026-10/a-1.jpg");
+      // canonical key 推导（与 planMembersInto 的 `x/${f.rel}` 一致）
+      expect(`x/${files[0]!.rel}`).toBe("x/2026-10/a-1.jpg");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("sandbox: --source 指向非缺省布局目录时按该目录打包（显式覆盖生效）", () => {
+    const root = mkdtempSync(path.join("/tmp", "mpack-srcflag-"));
+    try {
+      const tools = path.join(root, "media", "tools");
+      const legacy = path.join(root, "legacy-media"); // 非缺省位置，目录下直接是 YYYY-MM/
+      mkdirSync(path.join(tools), { recursive: true });
+      mkdirSync(path.join(legacy, "2024-05"), { recursive: true });
+      copyFileSync(SRC, path.join(tools, "media-pack.ts"));
+      writeFileSync(path.join(legacy, "2024-05", "old.jpg"), Buffer.from("legacy-bytes"));
+      const r = Bun.spawnSync(
+        ["bun", path.join(tools, "media-pack.ts"), "--initial", "--source", legacy],
+        { stdout: "pipe", stderr: "pipe" },
+      );
+      expect(r.exitCode).toBe(0);
+      const manifest = JSON.parse(
+        readFileSync(path.join(root, "media", "manifest", "manifest-1.json"), "utf8"),
+      );
+      expect(manifest.objects.map((o: { key: string }) => o.key)).toContain("x/2024-05/old.jpg");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 // ---------- monthOfVolume：vol-/patch- 两种卷名模式的月份解析 ----------
 
 describe("monthOfVolume", () => {
@@ -252,7 +306,7 @@ type Sandbox = { root: string; script: string; current: string };
 
 function makeSandbox(tag: string): Sandbox {
   const root = path.join(mkdtempSync(path.join("/tmp", `mpack-${tag}-`)));
-  const mainStatic = path.join(root, "static", "x-media");
+  const mainStatic = path.join(root, "media", "staging", "x");
   const tools = path.join(root, "media", "tools");
   mkdirSync(path.join(mainStatic, "1970-01"), { recursive: true });
   mkdirSync(path.join(mainStatic, "2024-05"), { recursive: true });
@@ -398,7 +452,7 @@ test("sandbox r5 P1-13 回归：同大小源内容漂移必须重打包并换代
     const original = "content-C-2024-clip";
     const mutated = "drifted-" + "X".repeat(original.length - 8);
     expect(mutated.length).toBe(original.length, "必须是同尺寸漂移");
-    const target = path.join(sb.root, "static", "x-media", "2024-05", "clip.mp4");
+    const target = path.join(sb.root, "media", "staging", "x", "2024-05", "clip.mp4");
     writeFileSync(target, Buffer.from(mutated));
 
     const r2 = runInitial(sb);
@@ -431,7 +485,7 @@ test("sandbox r5 P0-2+A2 联动：已发布卷源漂移 → --initial 直接报�
       ) + "\n"
     );
     writeFileSync(
-      path.join(sb.root, "static", "x-media", "1970-01", "poster-a.jpg"),
+      path.join(sb.root, "media", "staging", "x", "1970-01", "poster-a.jpg"),
       Buffer.from("mutated-AAAA-1970-poster-a")
     );
     const r2 = runInitial(sb);
@@ -474,7 +528,7 @@ test("sandbox r6 P0-2：prev 已发布 v1、本次只有 v2 → 失败，不写 
     expect(existsSync(stagingV1)).toBe(true);
 
     // 误删 1970-01 整个月份目录 → 本次扫描只有 2024-05
-    rmSync(path.join(sb.root, "static", "x-media", "1970-01"), { recursive: true, force: true });
+    rmSync(path.join(sb.root, "media", "staging", "x", "1970-01"), { recursive: true, force: true });
 
     const r = runInitial(sb);
     expect(r.code).not.toBe(0, "已发布卷缺失必须失败退出");
@@ -650,8 +704,8 @@ test("sandbox patch: 已发布月份追加文件 → --patch 新 gen，旧指针
     const c1 = readCurrent(sb);
 
     // 向已发布月份 1970-01 追加两个新文件（--initial 对此会因卷不可变而拒绝）
-    writeFileSync(path.join(sb.root, "static", "x-media", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
-    writeFileSync(path.join(sb.root, "static", "x-media", "1970-01", "late-2.jpg"), Buffer.from("late-content-2"));
+    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
+    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-2.jpg"), Buffer.from("late-content-2"));
 
     const r = runPatch(sb);
     expect(r.code).toBe(0);
@@ -710,7 +764,7 @@ test("sandbox patch: 重复 --patch 无新文件 → 不换代、current 逐字�
   try {
     expect(runInitial(sb).code).toBe(0);
     backfillPointers(sb);
-    writeFileSync(path.join(sb.root, "static", "x-media", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
+    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
     expect(runPatch(sb).code).toBe(0);
     expect(readCurrent(sb).gen).toBe(2);
 
@@ -732,7 +786,7 @@ test("sandbox patch: 同日同名补丁卷已被 manifest 引用 → 再有新�
   try {
     expect(runInitial(sb).code).toBe(0);
     backfillPointers(sb);
-    writeFileSync(path.join(sb.root, "static", "x-media", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
+    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
     expect(runPatch(sb).code).toBe(0);
     const c2 = readCurrent(sb);
     expect(c2.gen).toBe(2);
@@ -742,7 +796,7 @@ test("sandbox patch: 同日同名补丁卷已被 manifest 引用 → 再有新�
     const volBefore = readFileSync(patchPath);
 
     // 同日又来了新文件：补丁卷名与 gen2 引用的相同 → 必须 die，不得覆盖
-    writeFileSync(path.join(sb.root, "static", "x-media", "1970-01", "late-2.jpg"), Buffer.from("late-content-2"));
+    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-2.jpg"), Buffer.from("late-content-2"));
     const r = runPatch(sb);
     expect(r.code).not.toBe(0, "同日重复补丁必须失败退出");
     expect(r.stderr).toContain("禁止覆盖");
@@ -760,7 +814,7 @@ test("sandbox patch: staging 同名卷存在但未被 manifest 引用（崩溃�
   try {
     expect(runInitial(sb).code).toBe(0);
     backfillPointers(sb);
-    writeFileSync(path.join(sb.root, "static", "x-media", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
+    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
     // 模拟上次运行在打包后、manifest/current 落盘前崩溃留下的残卷
     const leftover = path.join(sb.root, "media", "staging", `patch-1970-01-${patchDay()}.tar`);
     writeFileSync(leftover, Buffer.from("corrupted-leftover-from-crashed-run"));
@@ -796,16 +850,17 @@ test("sandbox patch 后 --initial 仍 fail-closed（r6 P0-2 交互）：已发�
   try {
     expect(runInitial(sb).code).toBe(0);
     backfillPointers(sb);
-    writeFileSync(path.join(sb.root, "static", "x-media", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
+    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
     expect(runPatch(sb).code).toBe(0);
     backfillPointers(sb, 700000000); // 补丁卷也发布（指针回填）
     const c2 = readCurrent(sb);
     expect(c2.gen).toBe(2);
 
-    // 快照：current + 全部 staging 卷字节（含补丁卷）
+    // 快照：current + 全部 staging 卷字节（含补丁卷）；staging/x 是打包源目录（Phase 3），
+    // 快照只对卷（.tar）负责
     const beforeCurrent = readFileSync(sb.current);
     const stagingDir = path.join(sb.root, "media", "staging");
-    const volNames = readdirSync(stagingDir);
+    const volNames = readdirSync(stagingDir).filter((n) => n.endsWith(".tar"));
     expect(volNames.length).toBe(3);
     const volBytes = new Map(volNames.map((n) => [n, readFileSync(path.join(stagingDir, n))]));
 

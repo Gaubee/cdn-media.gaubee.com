@@ -2,7 +2,8 @@
 //
 // 用法:
 //   bun cdn-media/tools/media-pack.ts --initial
-//       扫描主仓 static/x-media，按 YYYY-MM 目录聚簇，产出每卷 ≤200MiB 的未压缩 USTAR
+//       扫描打包源（Phase 3 起默认 cdn-media/staging/x canonical 布局；--source 可指向
+//       任意月份目录根），按 YYYY-MM 目录聚簇，产出每卷 ≤200MiB 的未压缩 USTAR
 //       tar 卷（512 字节块对齐；成员路径 = canonical media key: x/<YYYY-MM>/<file>），
 //       卷名 vol-<YYYY-MM>-<seq>.tar（seq 从 1 起，三位零填充），输出到 cdn-media/staging。
 //       同时生成 manifest/manifest-<gen>.json（gen 从 1 起）并更新 manifest/current.json。
@@ -16,7 +17,7 @@
 //       非法/卷集合不一致）一律立即失败，绝不重初始化覆盖发布历史。staging 复用前
 //       逐成员重算源 sha256（同大小内容变更必产生新卷/新 gen）。
 //   bun cdn-media/tools/media-pack.ts --patch
-//       增量补丁（Phase 0.3）：扫描 static/x-media 中 manifest 尚未收录的新文件（按
+//       增量补丁（Phase 0.3）：扫描打包源中 manifest 尚未收录的新文件（按
 //       canonical key 对比当前代 manifest），按月份组各打包一个补丁卷
 //       patch-<YYYY-MM>-<DD>.tar（DD 为打包日，月份取自文件所属月份组，供发布按月对位；
 //       未压缩 USTAR、512 对齐、成员路径 = canonical key；单月超卷限时按
@@ -83,11 +84,21 @@ import * as path from "node:path";
 const TOOLS_DIR = import.meta.dir;
 const MEDIA_REPO = path.resolve(TOOLS_DIR, "..");
 const MAIN_ROOT = path.resolve(MEDIA_REPO, "..");
-const SRC_DIR = path.join(MAIN_ROOT, "static", "x-media");
+// Phase 3（cdn-media-bootstrap plan 3.3）源切换：打包源从主仓 static/x-media 改为
+// cdn-media/staging/x（staging 目录结构 = canonical key 布局：抓取管道直接下载到此，
+// media-pack 从 staging 打卷）。--source <dir> 可指向任意「月份目录根」
+//（目录下直接是 YYYY-MM/），例如回溯对账时指向旧的 static/x-media。
+const DEFAULT_SOURCE = path.join(MEDIA_REPO, "staging", "x");
+let SOURCE_DIR = DEFAULT_SOURCE;
 const STAGING = path.join(MEDIA_REPO, "staging");
 const MANIFEST_DIR = path.join(MEDIA_REPO, "manifest");
 const META_PATH = path.join(homedir(), ".gaubee-skills", "data", "sources", "x-likes", "media-meta.json");
 const RESTORE_DIR = path.join(STAGING, ".verify-restore");
+
+/** 解析打包源目录（--source 覆盖；缺省 staging/x canonical 布局）。导出供测试。 */
+export function resolveSourceDir(explicit?: string): string {
+  return explicit ? path.resolve(explicit) : DEFAULT_SOURCE;
+}
 
 const BLOCK = 512;
 const END_MARK = 1024;
@@ -285,11 +296,12 @@ export function buildUstarHeader(p: string, size: number, mtimeSec: number): Uin
 
 // ---------- 扫描与规划 ----------
 
-function scanSource(): Map<string, FileEntry[]> {
-  if (!existsSync(SRC_DIR)) die(`源目录不存在: ${SRC_DIR}`);
+/** 扫描打包源（月份目录根，缺省 --source 解析结果）；导出供测试 */
+export function scanSource(dir: string = SOURCE_DIR): Map<string, FileEntry[]> {
+  if (!existsSync(dir)) die(`源目录不存在: ${dir}`);
   const months = new Map<string, FileEntry[]>();
-  for (const month of readdirSync(SRC_DIR).sort()) {
-    const mdir = path.join(SRC_DIR, month);
+  for (const month of readdirSync(dir).sort()) {
+    const mdir = path.join(dir, month);
     if (!statSync(mdir).isDirectory()) continue;
     if (!/^\d{4}-\d{2}$/.test(month)) die(`非法月份目录名: ${month}`);
     const files: FileEntry[] = [];
@@ -392,7 +404,9 @@ class MetaSource {
   }
 
   metaFor(m: Member): { width?: number; height?: number; duration_ms?: number } {
-    let v = this.map.get(`x-media/${m.entry.rel}`);
+    // Phase 3：media-meta.json 键 = canonical media key `cdn-media/x/<月>/<文件>`
+    //（media-meta.ts 自 manifest 内嵌 w/h/ms 产出，键空间与 x.json mediaLocal 一致）
+    let v = this.map.get(`cdn-media/x/${m.entry.rel}`);
     if (!v || typeof v.w !== "number" || typeof v.h !== "number") {
       v = ffprobeDims(m.entry.abs);
       this.fallback += 1;
@@ -677,7 +691,7 @@ async function runInitial(): Promise<void> {
   for (const files of months.values()) {
     for (const f of files) { totalFiles += 1; totalBytes += f.size; }
   }
-  log(`[initial] 扫描 static/x-media: ${totalFiles} 文件, ${totalBytes} 字节, ${months.size} 个月份组`);
+  log(`[initial] 扫描 ${SOURCE_DIR}: ${totalFiles} 文件, ${totalBytes} 字节, ${months.size} 个月份组`);
 
   const plan = planVolumes(months);
 
@@ -902,7 +916,7 @@ async function runPatch(): Promise<void> {
     vanished = old.manifest.objects.filter((o) => !seen.has(o.key)).length;
   }
   log(
-    `[patch] 扫描 static/x-media: 当前 manifest-${old.gen}.json ${old.manifest.objects.length} 对象; ` +
+    `[patch] 扫描 ${SOURCE_DIR}: 当前 manifest-${old.gen}.json ${old.manifest.objects.length} 对象; ` +
       `新增 ${newFiles} 文件 / ${newBytes} 字节（月份组: ${[...newByMonth.keys()].sort().join(", ") || "无"}）` +
       (vanished > 0 ? `; 警告: ${vanished} 个已入卷对象在源目录缺失（卷 append-only 不受影响，删除需单独协议，--verify 将报缺失）` : "")
   );
@@ -1515,6 +1529,16 @@ async function runDrill(dirArg: string, maxSteps = 5): Promise<void> {
 
 if (import.meta.main) {
   const args = process.argv.slice(2);
+  // --source <dir>：打包源目录（月份目录根），--initial/--patch/--verify 共用（Phase 3）
+  const srcIdx = args.indexOf("--source");
+  if (srcIdx >= 0) {
+    const dir = args[srcIdx + 1];
+    if (!dir) {
+      console.error("--source 需要一个目录参数（月份目录根，目录下直接是 YYYY-MM/）");
+      process.exit(2);
+    }
+    SOURCE_DIR = resolveSourceDir(dir);
+  }
   if (args.includes("--initial")) {
     await runInitial();
   } else if (args.includes("--patch")) {
@@ -1541,8 +1565,9 @@ if (import.meta.main) {
     await runDrill(dirArg, steps);
   } else {
     console.error("用法: bun cdn-media/tools/media-pack.ts --initial | --patch | --verify | --publish [--only YYYY-MM] | --drill <dir> [--steps N]");
-    console.error("  --initial            扫描 static/x-media 按月打包 USTAR 卷到 cdn-media/staging，生成 manifest 与 current.json（已发布指针按 name+sha256 对账保留，url 统一 asset id API URL）");
-    console.error("  --patch              增量补丁：manifest 未收录的新文件按月打包为 patch-<YYYY-MM>-<DD>.tar 并换代（不动既有卷与已发布指针；同日同名补丁卷已被引用则拒绝覆盖）；无新增则不换代");
+    console.error("  --initial            扫描打包源（默认 cdn-media/staging/x，--source 可覆盖）按月打包 USTAR 卷到 cdn-media/staging，生成 manifest 与 current.json（已发布指针按 name+sha256 对账保留，url 统一 asset id API URL）");
+    console.error("  --patch              增量补丁：manifest 未收录的新文件（默认扫 cdn-media/staging/x，--source 可覆盖）按月打包为 patch-<YYYY-MM>-<DD>.tar 并换代（不动既有卷与已发布指针；同日同名补丁卷已被引用则拒绝覆盖）；无新增则不换代");
+  console.error("  --source <dir>       打包源目录（月份目录根，目录下直接是 YYYY-MM/）；Phase 3 起默认 cdn-media/staging/x（canonical key 布局），--initial/--patch/--verify 共用");
     console.error("  --verify             本地恢复演练：manifest + 卷 → 解包恢复 → 与源目录全量 sha256 对账");
     console.error("  --publish [--only M] 上传 staging 卷到 GitHub Releases（按月 release，幂等可重入；同名 asset 不可变，不一致直接报错），完成后回填 current.json 的 asset_id 与 url（API URL）");
     console.error("  --drill <dir>        外部恢复演练：空目录，只经公网 URL 拉取 current/manifest/卷并全量恢复 sha256 对账；--steps N 限步（2 = 指针+清单校验冒烟）");
