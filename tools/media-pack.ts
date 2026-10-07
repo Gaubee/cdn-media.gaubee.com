@@ -65,8 +65,9 @@
 //   在打包时为占位 null，--publish 后回填；url 统一为 asset id API URL（r5 P1-16）。
 //
 // 宽高与时长元数据:
-//   优先读 ~/.gaubee-skills/data/sources/x-likes/media-meta.json（键为 x-media/<月>/<文件>，
-//   值 {w, h, ms}）；缺失条目回退 ffprobe；仍不可得则省略字段。
+//   优先读 ~/.gaubee-skills/data/sources/x-likes/media-meta.json（键为 canonical media key
+//   cdn-media/x/<月>/<文件>，值 {w, h, ms}；Phase 3 前的旧键 x-media/<月>/<文件> 已废弃）；
+//   缺失条目回退 ffprobe；仍不可得则省略字段。
 //
 // 工程约束:
 //   - 流式 sha256（分块读取，不整读内存）；tar 头手工构造（ustar；name ≤100 字节，超限按
