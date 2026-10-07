@@ -120,8 +120,23 @@ export function mergePublishedPointers(
   volumes: VolRec[],
   prev: CurrentVol[] | null | undefined
 ): PointerMergeResult {
+  // r7 P1-2：重复输入保护——不依赖调用方先清洗。本次扫描集合或 prev 指针里
+  // 出现重复卷名都是上游损坏信号（loadCurrentState 已拦一道，这里兜底），
+  // 重复名会让 Map 去重悄悄吞掉一条卷记录，破坏 append-only 对账
   const scanByName = new Map<string, VolRec>(volumes.map((v) => [v.name, v]));
+  if (scanByName.size !== volumes.length) {
+    return {
+      ok: false,
+      error: `本次扫描集合存在重复卷名（${volumes.length} 条记录 vs ${scanByName.size} 个唯一名）——同名卷在单代 manifest 中必须唯一，禁止继续`,
+    };
+  }
   const prevByName = new Map<string, CurrentVol>((prev ?? []).map((v) => [v.name, v]));
+  if (prevByName.size !== (prev ?? []).length) {
+    return {
+      ok: false,
+      error: `prev 指针存在重复卷名（${(prev ?? []).length} 条记录 vs ${prevByName.size} 个唯一名）——current.json 卷名必须唯一，禁止继续`,
+    };
+  }
   // r6 P0-2 反向对账：prev 已发布卷缺失 = 历史卷丢失，fail-closed
   for (const p of prev ?? []) {
     if (!(typeof p.asset_id === "number" && p.asset_id > 0)) continue;
@@ -450,14 +465,30 @@ export function loadCurrentState(): CurrentState {
   if (!Array.isArray(cur.volumes)) {
     return { state: "corrupt", error: "current.json volumes 必须是数组" };
   }
+  // r7 P1-2：逐卷校验 + 唯一 name set——0 不是合法已发布指针（merge 只认 >0，
+  // 会被当未发布导致下一次 patch 把真实 asset 指针写成 null）也不是合法未发布态
+  //（null）；url 一律 null 或 asset id API URL；卷名重复直接拒绝
+  const curNames = new Set<string>();
   for (const v of cur.volumes) {
-    if (
-      typeof v?.name !== "string" ||
-      typeof v?.sha256 !== "string" ||
-      !(v.asset_id === null || (typeof v.asset_id === "number" && Number.isInteger(v.asset_id) && v.asset_id >= 0))
-    ) {
+    if (typeof v?.name !== "string" || typeof v?.sha256 !== "string") {
       return { state: "corrupt", error: `current.json 卷条目非法: ${JSON.stringify(v)}` };
     }
+    if (!(v.asset_id === null || (typeof v.asset_id === "number" && Number.isInteger(v.asset_id) && v.asset_id >= 1))) {
+      return {
+        state: "corrupt",
+        error: `current.json 卷 ${v.name} asset_id 非法（须 null 或 ≥1 整数，0 不是合法已发布指针也不是合法未发布态）: ${JSON.stringify(v.asset_id)}`,
+      };
+    }
+    if (!(v.url === null || (typeof v.asset_id === "number" && v.url === apiAssetUrl(v.asset_id)))) {
+      return {
+        state: "corrupt",
+        error: `current.json 卷 ${v.name} url 非法（须 null 或 asset id API URL ${v.asset_id === null ? "" : apiAssetUrl(v.asset_id)}）: ${JSON.stringify(v.url)}`,
+      };
+    }
+    if (curNames.has(v.name)) {
+      return { state: "corrupt", error: `current.json 重复卷名: ${v.name}` };
+    }
+    curNames.add(v.name);
   }
   const mp = path.join(MANIFEST_DIR, `manifest-${cur.gen}.json`);
   if (!existsSync(mp)) {
@@ -485,13 +516,32 @@ export function loadCurrentState(): CurrentState {
   if (manifest.format_version !== 1) {
     return { state: "corrupt", error: `manifest-${cur.gen}.json format_version=${manifest.format_version}，预期 1` };
   }
+  // r7 P1-2：代际强制一致——SHA 自洽但代际错乱的清单不得进入 ok 态
+  if (manifest.gen !== cur.gen) {
+    return {
+      state: "corrupt",
+      error: `manifest-${cur.gen}.json gen=${JSON.stringify(manifest.gen)} 与 current.json gen=${cur.gen} 不一致——sha 自洽但代际错乱，存在发布历史时禁止重初始化`,
+    };
+  }
   if (!Array.isArray(manifest.volumes) || !Array.isArray(manifest.objects)) {
     return { state: "corrupt", error: `manifest-${cur.gen}.json objects/volumes 必须是数组` };
   }
+  // r7 P1-2：current 与 manifest 各建唯一 name set——任意重复卷名拒绝；两边集合
+  // 必须双向相等（Map.size 相等不能替代反向校验：manifest=[v1,v2] vs
+  // current=[v1,v1] 时 size 与长度都恰好相等，v2 会被静默丢失）
+  const manVols = new Map<string, VolRec>();
+  for (const v of manifest.volumes) {
+    if (typeof v?.name !== "string" || typeof v?.sha256 !== "string") {
+      return { state: "corrupt", error: `manifest-${cur.gen}.json 卷条目非法: ${JSON.stringify(v)}` };
+    }
+    if (manVols.has(v.name)) {
+      return { state: "corrupt", error: `manifest-${cur.gen}.json 重复卷名: ${v.name}` };
+    }
+    manVols.set(v.name, v);
+  }
   // 卷集合一致：current.volumes 与 manifest.volumes 名称集合一致且逐卷 sha256 一致
-  const mvByName = new Map(manifest.volumes.map((v) => [v.name, v]));
   for (const cv of cur.volumes) {
-    const mv = mvByName.get(cv.name);
+    const mv = manVols.get(cv.name);
     if (!mv) {
       return { state: "corrupt", error: `current.json 卷 ${cv.name} 不在 manifest-${cur.gen}.json 中（不同代/损坏）` };
     }
@@ -499,8 +549,13 @@ export function loadCurrentState(): CurrentState {
       return { state: "corrupt", error: `卷 ${cv.name} 的 sha256 在 current.json 与 manifest-${cur.gen}.json 不一致` };
     }
   }
-  if (mvByName.size !== cur.volumes.length) {
-    return { state: "corrupt", error: `manifest 卷数(${mvByName.size}) 与 current.json 卷数(${cur.volumes.length}) 不一致` };
+  for (const [name] of manVols) {
+    if (!curNames.has(name)) {
+      return {
+        state: "corrupt",
+        error: `manifest-${cur.gen}.json 卷 ${name} 不在 current.json 中（发布指针缺失/不同代）——存在发布历史时禁止重初始化`,
+      };
+    }
   }
   return { state: "ok", gen: cur.gen, manifestPath: mp, manifest, pointer: cur };
 }
@@ -1030,8 +1085,8 @@ const BACKOFF_BASE_MS = 2000;
 const GH_API_TIMEOUT_MS = 60_000;
 const GH_UPLOAD_TIMEOUT_MS = 30 * 60_000;
 
-type GhAsset = { id: number; name: string; size: number; digest: string | null; browser_download_url: string };
-type GhRelease = { tag_name: string; assets: GhAsset[] };
+export type GhAsset = { id: number; name: string; size: number; digest: string | null; browser_download_url: string };
+export type GhRelease = { tag_name: string; assets: GhAsset[] };
 
 // 卷名 → 月份（--publish 按月对位 release、--patch 预检共享）。
 // vol-<YYYY-MM>-<seq>.tar 与补丁卷 patch-<YYYY-MM>-<DD>[-<seq>].tar 两种命名模式。
@@ -1088,6 +1143,59 @@ function loadCurrentStrict(): { cur: CurrentFile; manifest: Manifest } {
   return { cur: st.pointer, manifest: st.manifest };
 }
 
+// r7 P1-5：上传前统一预检（纯函数，不产生任何副作用）——对每个月份 release：
+// 1. 幂等分类（仅 size+digest 双一致才复用；不一致 = A2 冲突直接拒绝）；
+// 2. 投影 asset 总量 = 远端既有（含同名复用，它们已在远端计数中）+ 待上传，
+//    超过 1000 立即拒绝。旧实现只数本次 manifest 选中的卷数，漏计远端既有
+//    无关 asset，且总数检查发生在上传之后——超限副作用先于失败发生。
+// 所有判定先于任何 release 创建/上传副作用，任何月份失败 = 整体退出零副作用。
+export type UploadPlanEntry = {
+  month: string;
+  tag: string;
+  need: VolRec[];
+  reused: number;
+  remoteCount: number;
+};
+export type UploadPlan = { ok: true; plan: UploadPlanEntry[] } | { ok: false; error: string };
+
+export function planUploads(
+  byMonth: Map<string, VolRec[]>,
+  releases: Map<string, GhRelease>
+): UploadPlan {
+  const plan: UploadPlanEntry[] = [];
+  for (const month of [...byMonth.keys()].sort()) {
+    const list = byMonth.get(month)!;
+    const tag = `media-${month}`;
+    const rel = releases.get(tag);
+    const remoteCount = rel?.assets.length ?? 0;
+    // 幂等跳过（r5 P0-3）：仅 size+digest 双一致才跳过；不一致直接拒绝——
+    // 同名 asset 不可变是 A2 硬约束，不再 --clobber 重传
+    const assetByName = new Map((rel?.assets ?? []).map((a) => [a.name, a]));
+    const need: VolRec[] = [];
+    let reused = 0;
+    for (const v of list) {
+      const cls = classifyRemoteAsset(v, assetByName.get(v.name));
+      if (cls.action === "skip") {
+        reused += 1;
+        continue;
+      }
+      if (cls.action === "die") return { ok: false, error: cls.reason };
+      need.push(v);
+    }
+    const projected = remoteCount + need.length;
+    if (projected > ASSET_MAX_PER_RELEASE) {
+      return {
+        ok: false,
+        error:
+          `预检失败: ${tag} 上传后将有 ${projected} asset（远端既有 ${remoteCount} + 待上传 ${need.length}），` +
+          `超过每 release ${ASSET_MAX_PER_RELEASE} 上限——上传前退出，未产生任何 release/上传副作用`,
+      };
+    }
+    plan.push({ month, tag, need, reused, remoteCount });
+  }
+  return { ok: true, plan };
+}
+
 async function runPublish(only?: string): Promise<void> {
   const t0 = Date.now();
   if (only && !/^\d{4}-\d{2}$/.test(only)) die(`--only 参数非法: ${only}（应为 YYYY-MM）`);
@@ -1131,16 +1239,28 @@ async function runPublish(only?: string): Promise<void> {
     if (list) list.push(v); else byMonth.set(month, [v]);
   }
 
-  // 预检（上传前）：每 release asset 数 ≤1000
+  // 无网络快速预检（远端拉取前）：本次 manifest 选中卷数本身超限直接失败
   for (const [month, list] of byMonth) {
     if (list.length > ASSET_MAX_PER_RELEASE) {
       die(`预检失败: media-${month} 需 ${list.length} asset，超过每 release ${ASSET_MAX_PER_RELEASE} 上限`);
     }
   }
-  log(`[publish] 预检通过: ${byMonth.size} 个按月 release，每月 asset 数 ≤${ASSET_MAX_PER_RELEASE}`);
 
   log(`[publish] 拉取远端 release 列表…`);
   const releases = listGhReleases();
+
+  // r7 P1-5：上传前统一预检（纯函数）——逐月幂等分类 + 投影 asset 总量
+  //（远端既有 + 待上传）。所有判定先于任何 release 创建/上传副作用：
+  // 任何月份超限或 A2 冲突 = 整体退出，不产生部分上传
+  const planned = planUploads(byMonth, releases);
+  if (!planned.ok) die(planned.error);
+  log(`[publish] 上传前预检通过: ${planned.plan.length} 个按月 release，每 release 投影 asset 数 ≤${ASSET_MAX_PER_RELEASE}`);
+  for (const p of planned.plan) {
+    log(
+      `[publish] ${p.tag}: ${p.remoteCount > 0 ? `release 已存在（远端 asset ${p.remoteCount}）` : "release 将创建"}` +
+        `，复用 ${p.reused} / 待上传 ${p.need.length}，投影 asset ${p.remoteCount + p.need.length}`,
+    );
+  }
 
   let created = 0;
   let existed = 0;
@@ -1148,9 +1268,9 @@ async function runPublish(only?: string): Promise<void> {
   let reused = 0;
   let uploadedBytes = 0;
 
-  for (const month of [...byMonth.keys()].sort()) {
-    const list = byMonth.get(month)!;
-    const tag = `media-${month}`;
+  for (const p of planned.plan) {
+    const { tag, need } = p;
+    const list = byMonth.get(p.month)!;
     let rel = releases.get(tag);
     if (!rel) {
       const notes = `cdn-media 月度媒体卷归档 ${tag}：共 ${list.length} 个 tar 卷（vol-NNN 基础卷与 patch-NN 补丁卷），由 media-pack --publish 上传；对象索引以仓库 manifest 为准（卷内容不可变，asset 即权威副本）。`;
@@ -1158,31 +1278,17 @@ async function runPublish(only?: string): Promise<void> {
       rel = { tag_name: tag, assets: [] };
       releases.set(tag, rel);
       created += 1;
-      log(`[publish] ${tag}: release 已创建（${list.length} asset 待传）`);
+      log(`[publish] ${tag}: release 已创建（${need.length} asset 待传）`);
     } else {
       existed += 1;
-      log(`[publish] ${tag}: release 已存在（远端 asset ${rel.assets.length}，跳过创建）`);
-    }
-
-    // 幂等跳过（r5 P0-3）：仅 size+digest 双一致才跳过；不一致直接 die——
-    // 同名 asset 不可变是 A2 硬约束，不再 --clobber 重传
-    const assetByName = new Map(rel.assets.map((a) => [a.name, a]));
-    const need: VolRec[] = [];
-    for (const v of list) {
-      const cls = classifyRemoteAsset(v, assetByName.get(v.name));
-      if (cls.action === "skip") {
-        reused += 1;
-        continue;
-      }
-      if (cls.action === "die") die(cls.reason);
-      need.push(v);
     }
     if (need.length > 0) {
       uploadAssets(tag, need);
       uploaded += need.length;
       uploadedBytes += need.reduce((s, v) => s + v.size, 0);
     }
-    log(`[publish] ${tag}: 本月上传 ${need.length} / 复用 ${list.length - need.length}，累计 asset ${list.length}（${list.reduce((s, v) => s + v.size, 0)} 字节）`);
+    reused += p.reused;
+    log(`[publish] ${tag}: 本月上传 ${need.length} / 复用 ${p.reused}，累计 asset ${p.remoteCount + need.length}（${list.reduce((s, v) => s + v.size, 0)} 字节）`);
     Bun.sleepSync(500); // 按月限速，降低 secondary rate limit 风险
   }
 

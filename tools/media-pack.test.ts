@@ -18,7 +18,7 @@
 import { describe, expect, test } from "bun:test";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-import { apiAssetUrl, classifyRemoteAsset, GH_REPO, mergePublishedPointers, monthOfVolume } from "./media-pack.ts";
+import { apiAssetUrl, classifyRemoteAsset, GH_REPO, mergePublishedPointers, monthOfVolume, planUploads, type GhAsset, type GhRelease } from "./media-pack.ts";
 
 const SRC = path.resolve(import.meta.dir, "media-pack.ts");
 
@@ -127,6 +127,105 @@ describe("mergePublishedPointers", () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.preserved).toBe(1);
   });
+
+  // ---- r7 P1-2：重复输入保护（不依赖调用方清洗） ----
+
+  test("r7 P1-2: 本次扫描集合重复卷名 → 拒绝", () => {
+    const r = mergePublishedPointers([vol("v1", "s1"), vol("v1", "s1")], null);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("重复卷名");
+  });
+
+  test("r7 P1-2: prev 指针重复卷名 → 拒绝", () => {
+    const dup: CurrentVol[] = [
+      { asset_id: 42, url: apiAssetUrl(42), sha256: "s1", name: "v1" },
+      { asset_id: 43, url: apiAssetUrl(43), sha256: "s1", name: "v1" },
+    ];
+    const r = mergePublishedPointers([vol("v1", "s1")], dup);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("重复卷名");
+  });
+});
+
+// ---------- r7 P1-5：上传前上限闸门（远端既有计入投影） ----------
+
+describe("planUploads（r7 P1-5 上传前预检）", () => {
+  const ghAsset = (name: string, over: Partial<GhAsset> = {}): GhAsset => ({
+    id: 900000,
+    name,
+    size: 100,
+    digest: null,
+    browser_download_url: "https://example.com/x",
+    ...over,
+  });
+  const release = (tag: string, assets: GhAsset[]): GhRelease => ({ tag_name: tag, assets });
+
+  test("远端已有无关 asset 接近上限 → 拒绝且不产出上传计划（零上传副作用）", () => {
+    const existing = Array.from({ length: 999 }, (_, i) => ghAsset(`other-${i}.tar`));
+    const releases = new Map([["media-2024-05", release("media-2024-05", existing)]]);
+    const byMonth = new Map([
+      ["2024-05", [vol("vol-2024-05-001.tar", "sa"), vol("vol-2024-05-002.tar", "sb")]],
+    ]);
+    // 旧实现此处通过（只数本次 2 卷），上传后总数 1001 才爆——新实现上传前拒绝
+    const r = planUploads(byMonth, releases);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error).toContain("1001");
+      expect(r.error).toContain("上传前退出");
+    }
+  });
+
+  test("同名一致复用计入远端既有、不重复计数；未超限 → 产出精确计划", () => {
+    const v1 = vol("vol-2024-05-001.tar", "sa");
+    const v2 = vol("vol-2024-05-002.tar", "sb");
+    const v3 = vol("vol-2024-05-003.tar", "sc");
+    const existing = [
+      ...Array.from({ length: 997 }, (_, i) => ghAsset(`other-${i}.tar`)),
+      // v1/v2 已发布且 size+digest 双一致 → 复用
+      ghAsset(v1.name, { size: 100, digest: "sha256:sa" }),
+      ghAsset(v2.name, { size: 100, digest: "sha256:sb" }),
+    ];
+    const releases = new Map([["media-2024-05", release("media-2024-05", existing)]]);
+    const r = planUploads(new Map([["2024-05", [v1, v2, v3]]]), releases);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.plan).toHaveLength(1);
+      expect(r.plan[0].reused).toBe(2);
+      expect(r.plan[0].need.map((v) => v.name)).toEqual([v3.name]);
+      expect(r.plan[0].remoteCount).toBe(999);
+    }
+  });
+
+  test("恰好达到 1000 → 允许；1001 → 拒绝（边界）", () => {
+    const v1 = vol("vol-2024-05-001.tar", "sa");
+    const existing = Array.from({ length: 999 }, (_, i) => ghAsset(`other-${i}.tar`));
+    const releases = new Map([["media-2024-05", release("media-2024-05", existing)]]);
+    expect(planUploads(new Map([["2024-05", [v1]]]), releases).ok).toBe(true);
+    expect(planUploads(new Map([["2024-05", [v1, vol("vol-2024-05-002.tar", "sb")]]]), releases).ok).toBe(false);
+  });
+
+  test("远端同名不一致 → 上传前拒绝（A2，不产生部分上传）", () => {
+    const v1 = vol("vol-2024-05-001.tar", "sa");
+    const releases = new Map([
+      ["media-2024-05", release("media-2024-05", [ghAsset(v1.name, { size: 999, digest: "sha256:zz" })])],
+    ]);
+    const r = planUploads(new Map([["2024-05", [v1]]]), releases);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("不可变");
+  });
+
+  test("release 不存在 → 全部待上传且不超限 → 通过", () => {
+    const r = planUploads(
+      new Map([["2024-05", [vol("vol-2024-05-001.tar", "sa")]]]),
+      new Map()
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.plan[0].remoteCount).toBe(0);
+      expect(r.plan[0].need).toHaveLength(1);
+      expect(r.plan[0].reused).toBe(0);
+    }
+  });
 });
 
 // ---------- monthOfVolume：vol-/patch- 两种卷名模式的月份解析 ----------
@@ -229,18 +328,20 @@ test("sandbox: --initial 产出 gen1 + null 指针，重跑复用不换代", () 
   }
 });
 
-test("sandbox r5 P0-2/P1-16 回归：已发布指针重跑 --initial 后保留且 url 统一 API URL", () => {
+test("sandbox r5 P0-2/P1-16 回归：已发布指针重跑 --initial 后保留且 url 保持 API URL", () => {
   const sb = makeSandbox("pointer");
   try {
     expect(runInitial(sb).code).toBe(0);
     const c1 = readCurrent(sb);
-    // 模拟 --publish 回填（旧格式 browser_download_url 也在清理之列）
+    // 模拟 --publish 回填：已发布指针写 asset id + API URL
+    //（r7 P1-2 起 loadCurrentState 对 url fail-closed：非「null 或 asset id API
+    // URL」的 current 直接判 corrupt——browser_download_url 不再进入合法状态空间）
     const backfilled = {
       ...c1,
       volumes: c1.volumes.map((v, i) => ({
         ...v,
         asset_id: 615171231 + i,
-        url: `https://github.com/Gaubee/cdn-media.gaubee.com/releases/download/media-x/${v.name}`,
+        url: apiAssetUrl(615171231 + i),
       })),
     };
     writeFileSync(sb.current, JSON.stringify(backfilled, null, 2) + "\n");
@@ -254,6 +355,35 @@ test("sandbox r5 P0-2/P1-16 回归：已发布指针重跑 --initial 后保留�
       expect(v.asset_id).toBe(615171231 + i);
       expect(v.url).toBe(apiAssetUrl(615171231 + i));
     });
+  } finally {
+    rmSync(sb.root, { recursive: true, force: true });
+  }
+});
+
+test("sandbox r7 P1-2：current.json 携带非 API URL（browser_download_url）→ corrupt 拒绝", () => {
+  const sb = makeSandbox("legacy-url");
+  try {
+    expect(runInitial(sb).code).toBe(0);
+    const c1 = readCurrent(sb);
+    writeFileSync(
+      sb.current,
+      JSON.stringify(
+        {
+          ...c1,
+          volumes: c1.volumes.map((v) => ({
+            ...v,
+            asset_id: 615171231,
+            url: `https://github.com/${GH_REPO}/releases/download/media-x/${v.name}`,
+          })),
+        },
+        null,
+        2
+      ) + "\n"
+    );
+    const r = runInitial(sb);
+    expect(r.code).not.toBe(0, "browser_download_url 不在合法状态空间");
+    expect(r.stderr).toContain("url 非法");
+    expect(readCurrent(sb).gen).toBe(1);
   } finally {
     rmSync(sb.root, { recursive: true, force: true });
   }
@@ -407,22 +537,78 @@ const corruptCases: CorruptCase[] = [
     },
     expectErrContains: "manifest_path",
   },
+  // ---- r7 P1-2：fail-closed 补洞（重复卷名 / 集合不等 / asset_id=0 / 代际不一致） ----
+  {
+    name: "current.json 少一个 manifest 卷",
+    corrupt: (sb) => {
+      const c = JSON.parse(readFileSync(sb.current, "utf8")) as { volumes: CurrentVol[] };
+      c.volumes = c.volumes.filter((v) => v.name !== "vol-2024-05-001.tar");
+      writeFileSync(sb.current, JSON.stringify(c, null, 2) + "\n");
+    },
+    expectErrContains: "不在 current.json",
+  },
+  {
+    name: "current.json 重复卷名（[v1,v1] vs manifest [v1,v2]）",
+    corrupt: (sb) => {
+      const c = JSON.parse(readFileSync(sb.current, "utf8")) as { volumes: CurrentVol[] };
+      // 两条同名记录：Map.size 与数组长度都恰好相等，旧代码无法察觉
+      c.volumes = [c.volumes[0], { ...c.volumes[0] }];
+      writeFileSync(sb.current, JSON.stringify(c, null, 2) + "\n");
+    },
+    expectErrContains: "重复卷名",
+  },
+  {
+    name: "current.json asset_id=0",
+    corrupt: (sb) => {
+      const c = JSON.parse(readFileSync(sb.current, "utf8")) as { volumes: CurrentVol[] };
+      c.volumes[0] = { ...c.volumes[0], asset_id: 0 };
+      writeFileSync(sb.current, JSON.stringify(c, null, 2) + "\n");
+    },
+    expectErrContains: "0 不是合法已发布指针",
+  },
+  {
+    name: "manifest gen 与 current 不一致（SHA 自洽但代际错乱）",
+    corrupt: (sb) => {
+      const p = manifestPath(sb, 1);
+      const j = JSON.parse(readFileSync(p, "utf8")) as { gen: number };
+      j.gen = 2;
+      const bytes = Buffer.from(JSON.stringify(j, null, 2) + "\n");
+      writeFileSync(p, bytes);
+      // 同步 current 的 manifest_sha256，让损坏只剩「代际不一致」这一个面
+      const c = JSON.parse(readFileSync(sb.current, "utf8")) as { manifest_sha256: string };
+      c.manifest_sha256 = sha256(bytes);
+      writeFileSync(sb.current, JSON.stringify(c, null, 2) + "\n");
+    },
+    expectErrContains: "代际错乱",
+  },
 ];
 
 for (const tc of corruptCases) {
-  test(`sandbox r6 P0-3：${tc.name} → --initial 立即失败且 manifest/current 均不被改写`, () => {
+  test(`sandbox r6 P0-3/r7 P1-2：${tc.name} → --initial 立即失败且 current/manifest/staging 均不变`, () => {
     const sb = makeSandbox(`corrupt-${tc.expectErrContains.length}`);
     try {
       expect(runInitial(sb).code).toBe(0);
       const manifestDir = path.join(sb.root, "media", "manifest");
+      const stagingDir = path.join(sb.root, "media", "staging");
+      // r7 P1-2：staging 逐文件字节级快照（名:尺寸:sha256）——fail-closed 路径
+      // 不得增删改 staging 任何字节
+      const stagingSnap = () =>
+        readdirSync(stagingDir)
+          .map((f) => {
+            const p = path.join(stagingDir, f);
+            if (!statSync(p).isFile()) return `${f}:dir`;
+            return `${f}:${statSync(p).size}:${sha256(readFileSync(p))}`;
+          })
+          .sort();
 
       tc.corrupt(sb);
 
       // 快照 = 损坏后的状态：失败的运行不得对其做任何进一步改写
-      //（不重初始化、不覆盖、不推进 gen）
+      //（不重初始化、不覆盖、不推进 gen、不动 staging）
       const beforeCurrent = readFileSync(sb.current);
       const manifest1Path = path.join(manifestDir, "manifest-1.json");
       const beforeManifest1 = existsSync(manifest1Path) ? readFileSync(manifest1Path) : null;
+      const beforeStaging = stagingSnap();
 
       const r = runInitial(sb);
       expect(r.code).not.toBe(0, `${tc.name} 必须失败退出`);
@@ -434,6 +620,7 @@ for (const tc of corruptCases) {
         expect(existsSync(manifest1Path)).toBe(false, "缺失的 manifest 不得被工具重建");
       }
       expect(existsSync(path.join(manifestDir, "manifest-2.json"))).toBe(false, "失败不得推进 gen");
+      expect(stagingSnap()).toEqual(beforeStaging, "fail-closed 路径不得增删改 staging 任何字节");
     } finally {
       rmSync(sb.root, { recursive: true, force: true });
     }
