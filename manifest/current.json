@@ -1,7 +1,7 @@
 {
-  "gen": 4,
-  "manifest_sha256": "f78200fbdfa778370affde8f7b305acfe972f837fb9f5ac8cbee342b24d13851",
-  "manifest_path": "manifest/manifest-4.json",
+  "gen": 5,
+  "manifest_sha256": "95563519f9491fac95a218be0d4990c12b135589ba9e52d7471aab1c30a4480f",
+  "manifest_path": "manifest/manifest-5.json",
   "volumes": [
     {
       "asset_id": 615171231,
@@ -1232,7 +1232,25 @@
       "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/624572144",
       "sha256": "ce0610c4dfaa6c5e25281d4c5a568eaa0e737dd17b469955539b3a5438fc5ca1",
       "name": "patch-2026-10-09.tar"
+    },
+    {
+      "asset_id": 625727492,
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/625727492",
+      "sha256": "d6f4a1e09e1857bd37e80b33b91eb6eb1a3e187c28d222ebbf8a04351f34fa2a",
+      "name": "patch-2019-03-10.tar"
+    },
+    {
+      "asset_id": 625728324,
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/625728324",
+      "sha256": "409f9518a9826f6b5d11979138525b50094b3f0ad379f61bb25db1ede122ca67",
+      "name": "patch-2023-04-10.tar"
+    },
+    {
+      "asset_id": 625729253,
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/625729253",
+      "sha256": "2387378e5b3ed7fcc4757f4e24a56c123d043b195dab2118872815a47c5f3806",
+      "name": "patch-2026-10-10.tar"
     }
   ],
-  "updated_at": "2026-10-09T10:00:12.198Z"
+  "updated_at": "2026-10-09T17:55:12.596Z"
 }
