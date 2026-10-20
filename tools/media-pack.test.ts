@@ -18,7 +18,7 @@
 import { describe, expect, test } from "bun:test";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-import { apiAssetUrl, classifyRemoteAsset, GH_REPO, mergePublishedPointers, monthOfVolume, planUploads, resolveSourceDir, scanSource, type GhAsset, type GhRelease } from "./media-pack.ts";
+import { apiAssetUrl, classifyRemoteAsset, contentType, GH_REPO, isDownloadLeftover, mergePublishedPointers, monthOfVolume, planUploads, resolveSourceDir, scanSource, type GhAsset, type GhRelease } from "./media-pack.ts";
 
 const SRC = path.resolve(import.meta.dir, "media-pack.ts");
 
@@ -256,6 +256,34 @@ describe("resolveSourceDir / scanSource", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  test("scanSource 跳过下载器中断残留（.part / .ytdl / 分片临时文件）：半成品绝不入卷", () => {
+    const root = mkdtempSync(path.join("/tmp", "mpack-leftover-"));
+    try {
+      const monthRoot = path.join(root, "x");
+      const m = path.join(monthRoot, "2026-10");
+      mkdirSync(m, { recursive: true });
+      writeFileSync(path.join(m, "v.m3u8"), Buffer.from("#EXTM3U"));
+      writeFileSync(path.join(m, "v.seg0000.ts"), Buffer.from("seg"));
+      writeFileSync(path.join(m, "v-video.fhls-648.mp4.part"), Buffer.from("partial"));
+      writeFileSync(path.join(m, "v-video.fhls-648.mp4.ytdl"), Buffer.from("{}"));
+      writeFileSync(path.join(m, "v-video.mp4.part-Frag3.part"), Buffer.from("frag"));
+      const files = scanSource(monthRoot).get("2026-10")!;
+      expect(files.map((f) => f.rel)).toEqual(["2026-10/v.m3u8", "2026-10/v.seg0000.ts"]);
+      // 正常资产后缀不受影响（.ts 段 / 图片 / mp4）
+      for (const ok of ["a.jpg", "b.mp4", "c.m3u8", "c.seg0001.ts", "d.webp"]) expect(isDownloadLeftover(ok)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("contentType：HLS playlist/段按规范类型入 manifest（Safari 原生 HLS 识别依赖；manifest 不可改写，首次入卷前必须正确）", () => {
+    expect(contentType("x/2026-10/2111.m3u8")).toBe("application/vnd.apple.mpegurl");
+    expect(contentType("x/2026-10/2111.seg0007.ts")).toBe("video/mp2t");
+    expect(contentType("x/2026-10/a-video.mp4")).toBe("video/mp4");
+    expect(contentType("x/2026-10/a-poster.jpg")).toBe("image/jpeg");
+    expect(contentType("x/2026-10/unknown.bin")).toBe("application/octet-stream");
   });
 
   test("sandbox: --source 指向非缺省布局目录时按该目录打包（显式覆盖生效）", () => {

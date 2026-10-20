@@ -297,6 +297,13 @@ export function buildUstarHeader(p: string, size: number, mtimeSec: number): Uin
 
 // ---------- 扫描与规划 ----------
 
+/** 下载器中断残留（yt-dlp 的 .part / .ytdl 续传状态 / 分片临时文件）：不是资产，不入卷。
+ *  下载链路已改为临时目录落盘、拿到完整产物才迁入 staging（skills 侧 lib/x-video-dl.ts），
+ *  这里是纵深防御——100MB+ 半成品入卷会污染发布卷，甚至撞单卷硬限让整次打包 die。 */
+export function isDownloadLeftover(name: string): boolean {
+  return /\.(part|ytdl)$/i.test(name) || name.includes(".part-Frag");
+}
+
 /** 扫描打包源（月份目录根，缺省 --source 解析结果）；导出供测试 */
 export function scanSource(dir: string = SOURCE_DIR): Map<string, FileEntry[]> {
   if (!existsSync(dir)) die(`源目录不存在: ${dir}`);
@@ -310,6 +317,10 @@ export function scanSource(dir: string = SOURCE_DIR): Map<string, FileEntry[]> {
       const abs = path.join(mdir, name);
       const fst = statSync(abs);
       if (!fst.isFile()) die(`非常规文件，拒绝入卷: ${abs}`);
+      if (isDownloadLeftover(name)) {
+        log(`[scan] 跳过下载半成品（不入卷）: ${abs}`);
+        continue;
+      }
       if (name.includes("/") || encoder.encode(`${month}/${name}`).length > 260) {
         die(`成员名非法或过长: ${abs}`);
       }
@@ -433,11 +444,15 @@ const CONTENT_TYPES: Record<string, string> = {
   jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
   webp: "image/webp", avif: "image/avif", svg: "image/svg+xml",
   mp4: "video/mp4", m4v: "video/mp4", webm: "video/webm", mov: "video/quicktime",
+  // HLS 分片视频（2026-10-20）：playlist 必须按 Apple 规范类型下发，Safari 原生 HLS 据此识别；
+  // manifest 一经发布不可改写，首次入卷前就得正确——否则固化成 octet-stream。
+  m3u8: "application/vnd.apple.mpegurl", ts: "video/mp2t",
   mp3: "audio/mpeg", m4a: "audio/mp4", ogg: "audio/ogg", wav: "audio/wav",
   pdf: "application/pdf",
 };
 
-function contentType(key: string): string {
+/** 按 key 扩展名推断 content_type（未知 → octet-stream）；导出供测试 */
+export function contentType(key: string): string {
   const i = key.lastIndexOf(".");
   const ext = i >= 0 ? key.slice(i + 1).toLowerCase() : "";
   return CONTENT_TYPES[ext] || "application/octet-stream";
