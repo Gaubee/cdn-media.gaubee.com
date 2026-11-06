@@ -346,13 +346,17 @@ function makeSandbox(tag: string): Sandbox {
   return { root, script: path.join(tools, "media-pack.ts"), current: path.join(root, "media", "manifest", "current.json") };
 }
 
+// 子进程显式继承本进程解析出的时区：TZ 为空串时 bun 测试进程按 UTC 解释、
+// spawn 的子进程却回落到系统时区，patchDay() 会对不上导致日期相关用例假红。
+const CHILD_ENV = { ...process.env, TZ: Intl.DateTimeFormat().resolvedOptions().timeZone };
+
 function runInitial(sb: Sandbox): { code: number; stdout: string; stderr: string } {
-  const r = Bun.spawnSync(["bun", sb.script, "--initial"], { stdout: "pipe", stderr: "pipe" });
+  const r = Bun.spawnSync(["bun", sb.script, "--initial"], { env: CHILD_ENV, stdout: "pipe", stderr: "pipe" });
   return { code: r.exitCode, stdout: r.stdout.toString(), stderr: r.stderr.toString() };
 }
 
 function runMode(sb: Sandbox, mode: string): { code: number; stdout: string; stderr: string } {
-  const r = Bun.spawnSync(["bun", sb.script, mode], { stdout: "pipe", stderr: "pipe" });
+  const r = Bun.spawnSync(["bun", sb.script, mode], { env: CHILD_ENV, stdout: "pipe", stderr: "pipe" });
   return { code: r.exitCode, stdout: r.stdout.toString(), stderr: r.stderr.toString() };
 }
 
@@ -809,22 +813,29 @@ test("sandbox patch: 重复 --patch 无新文件 → 不换代、current 逐字�
   }
 });
 
-test("sandbox patch: 同日同名补丁卷已被 manifest 引用 → 再有新增文件时 die（防覆盖不可变卷）", () => {
+test("sandbox patch: 同日同月同名补丁卷已被 manifest 引用 → 再有新增文件时 die（防覆盖不可变卷）", () => {
   const sb = makeSandbox("patch-sameday");
   try {
     expect(runInitial(sb).code).toBe(0);
     backfillPointers(sb);
-    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
+    // 同日同月：当月组再补只能是同一卷名 → 必须 die（跨月回填是另一条路，见下一条测试）
+    const nowMonth = (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    })();
+    const curDir = path.join(sb.root, "media", "staging", "x", nowMonth);
+    mkdirSync(curDir, { recursive: true });
+    writeFileSync(path.join(curDir, "late-1.jpg"), Buffer.from("late-content-1"));
     expect(runPatch(sb).code).toBe(0);
     const c2 = readCurrent(sb);
     expect(c2.gen).toBe(2);
     const before = readFileSync(sb.current);
-    const patchPath = path.join(sb.root, "media", "staging", `patch-1970-01-${patchDay()}.tar`);
+    const patchPath = path.join(sb.root, "media", "staging", `patch-${nowMonth}-${patchDay()}.tar`);
     expect(existsSync(patchPath)).toBe(true);
     const volBefore = readFileSync(patchPath);
 
     // 同日又来了新文件：补丁卷名与 gen2 引用的相同 → 必须 die，不得覆盖
-    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-2.jpg"), Buffer.from("late-content-2"));
+    writeFileSync(path.join(curDir, "late-2.jpg"), Buffer.from("late-content-2"));
     const r = runPatch(sb);
     expect(r.code).not.toBe(0, "同日重复补丁必须失败退出");
     expect(r.stderr).toContain("禁止覆盖");
@@ -832,6 +843,36 @@ test("sandbox patch: 同日同名补丁卷已被 manifest 引用 → 再有新�
     expect(readCurrent(sb).gen).toBe(2);
     expect(existsSync(manifestPath(sb, 3))).toBe(false, "失败不得推进 gen");
     expect(readFileSync(patchPath).equals(volBefore)).toBe(true, "已引用补丁卷字节不得被改写");
+  } finally {
+    rmSync(sb.root, { recursive: true, force: true });
+  }
+});
+
+test("sandbox patch: 跨月回填撞名（老月份组 + 同 DD）→ 顺延 seq 新卷，不覆盖已引用卷", () => {
+  // 实例原型：2026-11-07 打包 2026-10 组 → patch-2026-10-07.tar 已被 10-07 的补丁占用。
+  // 老月份组的补丁不是同日重跑，A2 仍成立：取一个从未存在的卷名（-2 起），绝不覆盖。
+  const sb = makeSandbox("patch-crossmonth");
+  try {
+    expect(runInitial(sb).code).toBe(0);
+    backfillPointers(sb);
+    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-1.jpg"), Buffer.from("late-content-1"));
+    expect(runPatch(sb).code).toBe(0);
+    backfillPointers(sb); // 老月份的补丁卷也发布（指针回填 = 不可变）
+    const first = path.join(sb.root, "media", "staging", `patch-1970-01-${patchDay()}.tar`);
+    expect(existsSync(first)).toBe(true);
+    const firstBytes = readFileSync(first);
+    const genBefore = readCurrent(sb).gen;
+
+    // 同一 DD 又来一批老月份文件：名字撞了已引用卷 → 顺延 -2，不 die
+    writeFileSync(path.join(sb.root, "media", "staging", "x", "1970-01", "late-2.jpg"), Buffer.from("late-content-2"));
+    const r = runPatch(sb);
+    expect(r.code).toBe(0, "跨月回填撞名不得阻断打包");
+    expect(r.stdout).toContain("跨月撞名");
+    expect(readCurrent(sb).gen).toBe(genBefore + 1);
+    const m = readManifest(sb, readCurrent(sb).gen);
+    const added = m.volumes.at(-1)!;
+    expect(added.name).toBe(`patch-1970-01-${patchDay()}-2.tar`);
+    expect(readFileSync(first).equals(firstBytes)).toBe(true, "已引用的老补丁卷字节不得被改写");
   } finally {
     rmSync(sb.root, { recursive: true, force: true });
   }

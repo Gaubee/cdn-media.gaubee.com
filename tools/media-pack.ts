@@ -944,20 +944,49 @@ async function runPatch(): Promise<void> {
   // 2. 规划补丁卷：每月新增一个 patch-<YYYY-MM>-<DD>.tar（DD = 打包日；超限时 seq 分流）
   const now = new Date();
   const day = now.getDate();
-  const plan: PlannedVol[] = [];
-  for (const [month, files] of newByMonth) {
-    planMembersInto(month, files, (seq) => patchVolName(month, day, seq), plan);
-  }
+  const packingMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const buildPatchPlan = (offsets: Map<string, number>): PlannedVol[] => {
+    const vols: PlannedVol[] = [];
+    for (const [month, files] of newByMonth) {
+      const off = offsets.get(month) ?? 0;
+      planMembersInto(month, files, (seq) => patchVolName(month, day, seq + off), vols);
+    }
+    return vols;
+  };
+  let plan = buildPatchPlan(new Map());
 
-  // 3. 防覆盖闸门：同名补丁卷已被当前代 manifest 引用 = 已是不可变卷（A2），同日
-  //    重复补丁直接 die（改日重跑即得新卷名）；存在但未被引用 = 上次运行的崩溃残留，
-  //    允许确定性重打包覆盖（packVolume 内先删后写）
+  // 3. 防覆盖闸门：同名补丁卷已被当前代 manifest 引用 = 已是不可变卷（A2）。当月组的
+  //    同日重复补丁直接 die（改日重跑即得新卷名）；存在但未被引用 = 上次运行的崩溃残留，
+  //    允许确定性重打包覆盖（packVolume 内先删后写）。
+  //    跨月回填撞名（卷名里的月份组 ≠ 打包月，DD 恰好与该组自己月份的补丁日重合；实例
+  //    2026-11-07 打包 2026-10 组 → patch-2026-10-07.tar 已被 10-07 的补丁占用）不是
+  //    同日重跑：顺延该月 seq 取一个从未存在的卷名，A2 仍然成立（绝不覆盖已引用卷）。
   const referenced = new Set(old.manifest.volumes.map((v) => v.name));
+  const offsets = new Map<string, number>();
   for (const v of plan) {
-    if (referenced.has(v.name)) {
+    if (!referenced.has(v.name)) continue;
+    if (v.month === packingMonth) {
       die(
         `补丁卷 ${v.name} 已存在且被 manifest-${old.gen}.json 引用（同名卷不可变，A2）——` +
           `同日重复补丁禁止覆盖，请改日重跑 --patch 生成新补丁卷`
+      );
+    }
+    const seqOf = new RegExp(`^patch-${v.month}-\\d{2}-(\\d+)\\.tar$`);
+    const used = old.manifest.volumes.reduce((max, x) => {
+      const m = seqOf.exec(x.name);
+      return m ? Math.max(max, Number(m[1])) : max;
+    }, 1);
+    offsets.set(v.month, Math.max(offsets.get(v.month) ?? 0, used));
+  }
+  if (offsets.size > 0) {
+    plan = buildPatchPlan(offsets);
+    for (const v of plan) {
+      if (referenced.has(v.name)) die(`补丁卷 ${v.name} 顺延 seq 后仍与已引用卷同名，拒绝继续（不静默覆盖）`);
+    }
+    for (const [month, off] of [...offsets].sort()) {
+      log(
+        `[patch] 跨月撞名：${month} 组顺延 seq（从 -${off + 1} 起名），` +
+          `与已发布的 patch-${month}-${String(day).padStart(2, "0")}.tar 区分`
       );
     }
   }
