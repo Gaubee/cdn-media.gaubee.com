@@ -971,7 +971,7 @@ async function runPatch(): Promise<void> {
           `同日重复补丁禁止覆盖，请改日重跑 --patch 生成新补丁卷`
       );
     }
-    const seqOf = new RegExp(`^patch-${v.month}-\\d{2}-(\\d+)\\.tar$`);
+    const seqOf = new RegExp(`^patch-${v.month}-${String(day).padStart(2, "0")}-(\\d+)\\.tar$`);
     const used = old.manifest.volumes.reduce((max, x) => {
       const m = seqOf.exec(x.name);
       return m ? Math.max(max, Number(m[1])) : max;
