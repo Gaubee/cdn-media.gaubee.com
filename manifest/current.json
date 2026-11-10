@@ -1,7 +1,7 @@
 {
-  "gen": 32,
-  "manifest_sha256": "fd3bfb7a391b392424dc191e3e2339846177fc63dedbd7d15fdf93d6f74a7e9d",
-  "manifest_path": "manifest/manifest-32.json",
+  "gen": 33,
+  "manifest_sha256": "830748f048b9a94459b46cde10de7d514217424fed990e8ec1b8a962a9d109bd",
+  "manifest_path": "manifest/manifest-33.json",
   "volumes": [
     {
       "asset_id": 615171231,
@@ -1718,7 +1718,13 @@
       "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/729247796",
       "sha256": "398d7485bf20bd39fffbe400930f9c6f0a8d72a5ea52cf89c6495a66ff2543c0",
       "name": "patch-2026-11-10.tar"
+    },
+    {
+      "asset_id": 733247834,
+      "url": "https://api.github.com/repos/Gaubee/cdn-media.gaubee.com/releases/assets/733247834",
+      "sha256": "b60d5aa975f2829d830e0babcee4132d5fa20a70a102b6558dc4840b3d706c79",
+      "name": "patch-2026-11-11.tar"
     }
   ],
-  "updated_at": "2026-11-09T22:40:20.789Z"
+  "updated_at": "2026-11-10T22:44:54.627Z"
 }
